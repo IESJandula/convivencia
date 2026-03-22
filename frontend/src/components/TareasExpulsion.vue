@@ -11,14 +11,12 @@
     </div>
 
     <div class="toolbar">
-      <p><strong>Profesor:</strong> {{ profesorNombre }} ({{ profesorEmail }})</p>
       <button class="btn btn-primary" @click="cargarTareas">🔄 Actualizar</button>
     </div>
 
     <table v-if="tareas.length">
       <thead>
         <tr>
-          <th>Expulsión</th>
           <th>Alumno</th>
           <th>Fechas</th>
           <th>Asignatura</th>
@@ -29,7 +27,6 @@
       </thead>
       <tbody>
         <tr v-for="tarea in tareas" :key="tarea.id">
-          <td>#{{ tarea.expulsionId }}</td>
           <td>{{ tarea.alumnoNombreCompleto }}</td>
           <td>{{ formatearFecha(tarea.fechaInicioExpulsion) }} - {{ formatearFecha(tarea.fechaFinExpulsion) }}</td>
           <td>{{ tarea.asignatura }}</td>
@@ -50,16 +47,9 @@
           <td>
             <div class="acciones">
               <button
-                class="btn btn-primary"
-                :disabled="tarea.estado === 'COMPLETADA' || cargandoId === tarea.id"
-                @click="guardarTarea(tarea.id, false)"
-              >
-                {{ cargandoId === tarea.id ? 'Guardando...' : 'Guardar borrador' }}
-              </button>
-              <button
                 class="btn btn-success"
                 :disabled="tarea.estado === 'COMPLETADA' || cargandoId === tarea.id"
-                @click="guardarTarea(tarea.id, true)"
+                @click="guardarTarea(tarea.id)"
               >
                 {{ cargandoId === tarea.id ? 'Enviando...' : '✅ Enviar tareas' }}
               </button>
@@ -124,7 +114,7 @@ export default {
         this.emitirPendientes()
       }
     },
-    async guardarTarea(tareaId, completar) {
+    async guardarTarea(tareaId) {
       this.mensaje = ''
       this.cargandoId = tareaId
       try {
@@ -132,11 +122,9 @@ export default {
         await axios.patch(`${API_URL}/tareas-expulsion/${tareaId}`, {
           profesorEmail: this.profesorEmail,
           descripcionTarea: descripcionLimpia,
-          completar
+          completar: true
         })
-        this.mensaje = completar
-          ? 'Tareas enviadas y marcadas como completadas.'
-          : 'Borrador de tarea guardado.'
+        this.mensaje = 'Tareas enviadas y marcadas como completadas.'
         this.mensajeTipo = 'success'
         await this.cargarTareas()
       } catch (error) {
@@ -170,7 +158,7 @@ export default {
 </script>
 
 <style scoped>
-.toolbar { display: flex; justify-content: space-between; align-items: center; margin: 1rem 0; }
+.toolbar { display: flex; justify-content: flex-end; align-items: center; margin: 1rem 0; }
 .banner { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 6px; background: #fff7ed; color: #9a3412; font-weight: 600; }
 table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }

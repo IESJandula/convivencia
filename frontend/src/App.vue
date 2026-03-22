@@ -216,17 +216,38 @@ export default {
   border-radius: 50%;
   background: #facc15;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
-  animation: pending-blink 1s infinite ease-in-out;
+  position: relative;
+  animation: pending-blink 1s infinite steps(1, end);
+}
+
+.pending-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(250, 204, 21, 0.55);
+  transform: scale(1);
+  opacity: 0.8;
+  animation: pending-ripple 1.2s infinite ease-out;
 }
 
 @keyframes pending-blink {
-  0%, 100% {
+  0%, 49% {
     background: #facc15;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 0 0 rgba(250, 204, 21, 0.55);
   }
-  50% {
+  50%, 100% {
     background: #f59e0b;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 0 6px rgba(245, 158, 11, 0.22);
+  }
+}
+
+@keyframes pending-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
   }
 }
 .nav-button.router-link-active { background: white !important; color: #1a3a5a !important; font-weight: bold; }

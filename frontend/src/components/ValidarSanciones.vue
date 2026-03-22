@@ -1,5 +1,11 @@
 <template>
   <div class="card">
+    <transition name="toast-fade">
+      <div v-if="toastVisible" :class="['creation-toast', toastTipo === 'success' ? 'ok' : 'err']">
+        {{ toastMensaje }}
+      </div>
+    </transition>
+
     <h2>⚖️ Monitorización Jefatura</h2>
 
     <div v-if="mensaje" :class="['alert', mensajeTipo === 'success' ? 'alert-success' : 'alert-error']">
@@ -16,7 +22,6 @@
       <table v-else>
         <thead>
           <tr>
-            <th>Expulsión</th>
             <th>Alumno</th>
             <th>Curso</th>
             <th>Grupo</th>
@@ -26,7 +31,6 @@
         </thead>
         <tbody>
           <tr v-for="exp in expulsionesPdf" :key="exp.expulsionId">
-            <td>#{{ exp.expulsionId }}</td>
             <td>{{ exp.alumnoNombreCompleto || '-' }}</td>
             <td>{{ exp.curso || '-' }}</td>
             <td>{{ exp.grupo || '-' }}</td>
@@ -135,6 +139,10 @@ export default {
       fechaFin: '',
       mensaje: '',
       mensajeTipo: 'success',
+      toastVisible: false,
+      toastMensaje: '',
+      toastTipo: 'success',
+      toastTimer: null,
       guardandoExpulsion: false,
       expulsionesPdf: [],
       cargandoPdfId: null,
@@ -174,8 +182,22 @@ export default {
   beforeUnmount() {
     this.guardarEstadoVista()
     this.desactivarObservadoresVista()
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer)
+    }
   },
   methods: {
+    mostrarToast(texto, tipo = 'success') {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer)
+      }
+      this.toastMensaje = texto
+      this.toastTipo = tipo
+      this.toastVisible = true
+      this.toastTimer = setTimeout(() => {
+        this.toastVisible = false
+      }, 3000)
+    },
     guardarEstadoVista() {
       try {
         const estado = {
@@ -387,8 +409,9 @@ export default {
         ]
         this.guardarEstadoVista()
 
-        this.mensaje = `Expulsión creada (ID ${data.expulsionId}). Partes computados: ${data.partesComputados}. Tareas generadas: ${data.tareasPendientesGeneradas}. Para descargar la carta PDF, debe haber al menos una tarea agregada con actividad real.`
+        this.mensaje = ''
         this.mensajeTipo = 'success'
+        this.mostrarToast(`Se ha expulsado al alumno ${alumnoNombreCompleto || 'seleccionado'} con exito.`, 'success')
         this.selectedPartes = []
         await this.cargarPartes()
         await this.actualizarListadoPdf()
@@ -461,6 +484,42 @@ export default {
 </script>
 
 <style scoped>
+.creation-toast {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+}
+
+.creation-toast.ok {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.creation-toast.err {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -8px);
+}
+
 .filtros { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.75rem; margin: 1rem 0 1.5rem; }
 input, select { padding: 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; }
 .expulsion-panel { margin: 1rem 0; padding: 1rem; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; }
