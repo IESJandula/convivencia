@@ -26,9 +26,9 @@
         <router-link to="/nuevo" class="nav-button">📝 Nuevo Parte</router-link>
         <router-link v-if="rolUsuario === 'PROFESOR' && esGuardiaUsuario" to="/aula-convivencia" class="nav-button">🏫 Aula Convivencia</router-link>
         <router-link v-if="rolUsuario === 'PROFESOR'" to="/tareas-expulsion" class="nav-button">📚 Tareas Expulsión</router-link>
-        <router-link v-if="rolUsuario === 'TUTOR'" to="/mis-alumnos" class="nav-button">👥 Mi Tutoría</router-link>
         <router-link v-if="rolUsuario === 'JEFATURA'" to="/validar-sanciones" class="nav-button">⚖️ Validar Sanciones</router-link>
         <router-link v-if="rolUsuario === 'JEFATURA'" to="/expulsiones" class="nav-button">📄 Expulsiones</router-link>
+        <router-link v-if="rolUsuario === 'PROFESOR' || rolUsuario === 'TUTOR'" to="/mis-alumnos" class="nav-button">👥 Mi Tutoría</router-link>
         <router-link to="/historial" class="nav-button">📋 Historial</router-link>
       </div>
     </header>

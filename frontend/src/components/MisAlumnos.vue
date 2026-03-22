@@ -24,6 +24,7 @@
           <th>Gravedad</th>
           <th>Estado</th>
           <th>Cómputo</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -34,9 +35,39 @@
           <td>{{ parte.gravedad }}</td>
           <td>{{ parte.estado }}</td>
           <td>{{ parte.estadoComputo }}</td>
+          <td>
+            <button class="btn-ver" @click="verParte(parte)">Ver parte</button>
+          </td>
         </tr>
       </tbody>
     </table>
+
+    <div v-if="parteSeleccionado" class="modal-overlay" @click.self="cerrarDetalle">
+      <div class="modal-detalle">
+        <div class="modal-header">
+          <h3>Detalle del Parte</h3>
+          <button class="btn-cerrar" @click="cerrarDetalle">×</button>
+        </div>
+
+        <div class="detalle-grid">
+          <p><strong>Fecha:</strong> {{ formatearFecha(parteSeleccionado.fecha) }}</p>
+          <p><strong>Alumno:</strong> {{ parteSeleccionado.alumno?.nombre }} {{ parteSeleccionado.alumno?.apellidos }}</p>
+          <p><strong>Curso:</strong> {{ parteSeleccionado.alumno?.curso }} {{ parteSeleccionado.alumno?.grupo }}</p>
+          <p><strong>Profesor:</strong> {{ parteSeleccionado.profesor?.nombre }}</p>
+          <p><strong>Gravedad:</strong> {{ parteSeleccionado.gravedad }}</p>
+          <p><strong>Estado:</strong> {{ parteSeleccionado.estado }}</p>
+          <p><strong>Cómputo:</strong> {{ parteSeleccionado.estadoComputo }}</p>
+          <p><strong>Conducta:</strong> {{ parteSeleccionado.conducta?.codigo }} - {{ parteSeleccionado.conducta?.descripcion }}</p>
+          <p><strong>Medida tomada:</strong> {{ parteSeleccionado.medidaTomada || 'Sin medida' }}</p>
+          <p><strong>Tareas:</strong> {{ parteSeleccionado.tareas || 'Sin tareas' }}</p>
+        </div>
+
+        <div class="descripcion">
+          <h4>Descripción</h4>
+          <p>{{ parteSeleccionado.descripcion || 'Sin descripción' }}</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -50,6 +81,7 @@ export default {
     return {
       grupoTutoria: null,
       partes: [],
+      parteSeleccionado: null,
       mensaje: '',
       mensajeTipo: 'success'
     }
@@ -79,6 +111,12 @@ export default {
     formatearFecha(fecha) {
       if (!fecha) return ''
       return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')
+    },
+    verParte(parte) {
+      this.parteSeleccionado = parte
+    },
+    cerrarDetalle() {
+      this.parteSeleccionado = null
     }
   }
 }
@@ -92,4 +130,68 @@ th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
 .alert { margin: 1rem 0; padding: 0.75rem 1rem; border-radius: 6px; }
 .alert-success { background: #dcfce7; color: #166534; }
 .alert-error { background: #fee2e2; color: #991b1b; }
+.btn-ver {
+  border: 1px solid #0b4e6b;
+  background: white;
+  color: #0b4e6b;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-ver:hover { background: #e6f2f7; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 999;
+}
+
+.modal-detalle {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+  padding: 1rem 1.2rem;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.btn-cerrar {
+  border: none;
+  background: transparent;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #374151;
+}
+
+.detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.detalle-grid p,
+.descripcion p {
+  margin: 0;
+}
+
+.descripcion {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.7rem;
+}
 </style>

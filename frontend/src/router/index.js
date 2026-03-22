@@ -42,7 +42,7 @@ const routes = [
     meta: { 
       title: 'Mi Tutoría', 
       requiresAuth: true, 
-      role: 'TUTOR' // Solo accesible para rol TUTOR
+      role: ['PROFESOR', 'TUTOR']
     }
   },
   {
@@ -126,8 +126,9 @@ router.beforeEach((to, from, next) => {
     }
 
     // Comprobación final de permiso
-    if (userRole !== requiredRole) {
-      alert(`Acceso denegado: Se requiere rol de ${requiredRole}`)
+    const rolesPermitidos = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
+    if (!rolesPermitidos.includes(userRole)) {
+      alert(`Acceso denegado: Se requiere uno de estos roles: ${rolesPermitidos.join(', ')}`)
       return next('/nuevo') // Te devuelve a la zona común
     }
   }

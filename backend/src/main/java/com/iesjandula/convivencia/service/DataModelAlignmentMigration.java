@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Component
 public class DataModelAlignmentMigration implements ApplicationRunner {
 
-    private static final String MIGRATION_KEY = "2026-03-03-unified-model-alignment-v9";
+    private static final String MIGRATION_KEY = "2026-03-22-unified-model-alignment-v10";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -36,6 +36,7 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
         alignReferenceColumnsToProfesorEmail();
         ensureMissingProfesoresForReferences();
         deduplicateTutorAssignments();
+        deduplicateGroupsByCourseAndLetter();
 
         ensureAlumnosGrupoIdColumn();
         backfillAlumnosGrupoId();
@@ -587,6 +588,82 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
                 """);
     }
 
+        private void deduplicateGroupsByCourseAndLetter() {
+                if (!tableExists("grupos")) {
+                        return;
+                }
+
+                jdbcTemplate.execute("""
+                                UPDATE grupos keep_g
+                                JOIN (
+                                        SELECT MIN(g.id) keep_id,
+                                                     MIN(CASE WHEN g.tutor_email IS NOT NULL THEN g.tutor_email END) tutor_email,
+                                                     MAX(CASE WHEN g.activo = b'1' THEN 1 ELSE 0 END) has_active
+                                        FROM grupos g
+                                        GROUP BY UPPER(TRIM(g.curso)), UPPER(TRIM(g.letra))
+                                        HAVING COUNT(*) >= 1
+                                ) m ON m.keep_id = keep_g.id
+                                SET keep_g.tutor_email = COALESCE(keep_g.tutor_email, m.tutor_email),
+                                        keep_g.activo = CASE WHEN m.has_active = 1 THEN b'1' ELSE keep_g.activo END
+                                WHERE (keep_g.tutor_email IS NULL AND m.tutor_email IS NOT NULL)
+                                     OR (m.has_active = 1 AND keep_g.activo <> b'1')
+                                """);
+
+                if (tableExists("alumnos") && columnExists("alumnos", "grupo_id")) {
+                        jdbcTemplate.execute("""
+                                        UPDATE alumnos a
+                                        JOIN grupos g_dup ON a.grupo_id = g_dup.id
+                                        JOIN (
+                                                SELECT MIN(id) keep_id,
+                                                             UPPER(TRIM(curso)) curso_key,
+                                                             UPPER(TRIM(letra)) letra_key
+                                                FROM grupos
+                                                GROUP BY UPPER(TRIM(curso)), UPPER(TRIM(letra))
+                                        ) keep_map
+                                            ON UPPER(TRIM(g_dup.curso)) = keep_map.curso_key
+                                         AND UPPER(TRIM(g_dup.letra)) = keep_map.letra_key
+                                        SET a.grupo_id = keep_map.keep_id
+                                        WHERE a.grupo_id IS NOT NULL
+                                            AND a.grupo_id <> keep_map.keep_id
+                                        """);
+                }
+
+                if (tableExists("imparte") && columnExists("imparte", "grupo_id")) {
+                        jdbcTemplate.execute("""
+                                        UPDATE imparte i
+                                        JOIN grupos g_dup ON i.grupo_id = g_dup.id
+                                        JOIN (
+                                                SELECT MIN(id) keep_id,
+                                                             UPPER(TRIM(curso)) curso_key,
+                                                             UPPER(TRIM(letra)) letra_key
+                                                FROM grupos
+                                                GROUP BY UPPER(TRIM(curso)), UPPER(TRIM(letra))
+                                        ) keep_map
+                                            ON UPPER(TRIM(g_dup.curso)) = keep_map.curso_key
+                                         AND UPPER(TRIM(g_dup.letra)) = keep_map.letra_key
+                                        SET i.grupo_id = keep_map.keep_id
+                                        WHERE i.grupo_id IS NOT NULL
+                                            AND i.grupo_id <> keep_map.keep_id
+                                        """);
+                }
+
+                jdbcTemplate.execute("""
+                                DELETE g
+                                FROM grupos g
+                                JOIN (
+                                        SELECT MIN(id) keep_id,
+                                                     UPPER(TRIM(curso)) curso_key,
+                                                     UPPER(TRIM(letra)) letra_key
+                                        FROM grupos
+                                        GROUP BY UPPER(TRIM(curso)), UPPER(TRIM(letra))
+                                        HAVING COUNT(*) > 1
+                                ) d
+                                    ON UPPER(TRIM(g.curso)) = d.curso_key
+                                 AND UPPER(TRIM(g.letra)) = d.letra_key
+                                WHERE g.id <> d.keep_id
+                                """);
+        }
+
     private void ensureAlumnosGrupoIdColumn() {
         if (!columnExists("alumnos", "grupo_id")) {
             jdbcTemplate.execute("ALTER TABLE alumnos ADD COLUMN grupo_id INT NULL");
@@ -661,6 +738,10 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
 
         if (!indexExists("grupos", "UK_grupos_tutor_email")) {
             jdbcTemplate.execute("CREATE UNIQUE INDEX UK_grupos_tutor_email ON grupos (tutor_email)");
+        }
+
+        if (!indexExists("grupos", "UK_grupos_curso_letra")) {
+            jdbcTemplate.execute("CREATE UNIQUE INDEX UK_grupos_curso_letra ON grupos (curso, letra)");
         }
     }
 
