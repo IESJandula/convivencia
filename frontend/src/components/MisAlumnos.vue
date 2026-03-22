@@ -23,7 +23,6 @@
           <th>Profesor</th>
           <th>Gravedad</th>
           <th>Estado</th>
-          <th>Cómputo</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -33,8 +32,11 @@
           <td>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</td>
           <td>{{ parte.profesor.nombre }}</td>
           <td>{{ parte.gravedad }}</td>
-          <td>{{ parte.estado }}</td>
-          <td>{{ parte.estadoComputo }}</td>
+          <td>
+            <span :class="['badge', estaComputado(parte) ? 'badge-info' : 'badge-pending']">
+              {{ estaComputado(parte) ? 'EXPULSADO' : 'PENDIENTE' }}
+            </span>
+          </td>
           <td>
             <button class="btn-ver" @click="verParte(parte)">Ver parte</button>
           </td>
@@ -55,8 +57,7 @@
           <p><strong>Curso:</strong> {{ parteSeleccionado.alumno?.curso }} {{ parteSeleccionado.alumno?.grupo }}</p>
           <p><strong>Profesor:</strong> {{ parteSeleccionado.profesor?.nombre }}</p>
           <p><strong>Gravedad:</strong> {{ parteSeleccionado.gravedad }}</p>
-          <p><strong>Estado:</strong> {{ parteSeleccionado.estado }}</p>
-          <p><strong>Cómputo:</strong> {{ parteSeleccionado.estadoComputo }}</p>
+          <p><strong>Estado:</strong> {{ estaComputado(parteSeleccionado) ? 'EXPULSADO' : 'PENDIENTE' }}</p>
           <p><strong>Conducta:</strong> {{ parteSeleccionado.conducta?.codigo }} - {{ parteSeleccionado.conducta?.descripcion }}</p>
           <p><strong>Medida tomada:</strong> {{ parteSeleccionado.medidaTomada || 'Sin medida' }}</p>
           <p><strong>Tareas:</strong> {{ parteSeleccionado.tareas || 'Sin tareas' }}</p>
@@ -112,6 +113,18 @@ export default {
       if (!fecha) return ''
       return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')
     },
+    estaComputado(parte) {
+      if (!parte) return false
+
+      return Boolean(
+        parte.expulsionId ||
+        parte.expulsion ||
+        parte.fechaInicioExpulsion ||
+        parte.fechaFinExpulsion ||
+        parte.estadoComputo === 'COMPUTADO' ||
+        parte.estado === 'COMPUTADO'
+      )
+    },
     verParte(parte) {
       this.parteSeleccionado = parte
     },
@@ -130,6 +143,21 @@ th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
 .alert { margin: 1rem 0; padding: 0.75rem 1rem; border-radius: 6px; }
 .alert-success { background: #dcfce7; color: #166534; }
 .alert-error { background: #fee2e2; color: #991b1b; }
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.badge-info {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.badge-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
 .btn-ver {
   border: 1px solid #0b4e6b;
   background: white;

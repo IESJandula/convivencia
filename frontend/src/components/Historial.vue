@@ -51,7 +51,7 @@
           </td>
           <td>
             <span :class="['badge', estaComputado(parte) ? 'badge-info' : 'badge-pending']">
-              {{ estaComputado(parte) ? 'COMPUTADO' : 'PENDIENTE' }}
+              {{ estaComputado(parte) ? 'EXPULSADO' : 'PENDIENTE' }}
             </span>
           </td>
           <td>

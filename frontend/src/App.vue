@@ -25,7 +25,10 @@
       <div class="nav-links">
         <router-link to="/nuevo" class="nav-button">📝 Nuevo Parte</router-link>
         <router-link v-if="rolUsuario === 'PROFESOR' && esGuardiaUsuario" to="/aula-convivencia" class="nav-button">🏫 Aula Convivencia</router-link>
-        <router-link v-if="rolUsuario === 'PROFESOR'" to="/tareas-expulsion" class="nav-button">📚 Tareas Expulsión</router-link>
+        <router-link v-if="rolUsuario === 'PROFESOR'" to="/tareas-expulsion" class="nav-button nav-with-indicator">
+          📚 Tareas Expulsión
+          <span v-if="tareasPendientes > 0" class="pending-dot" :title="`Tienes ${tareasPendientes} tarea(s) pendiente(s)`"></span>
+        </router-link>
         <router-link v-if="rolUsuario === 'JEFATURA'" to="/validar-sanciones" class="nav-button">⚖️ Validar Sanciones</router-link>
         <router-link v-if="rolUsuario === 'JEFATURA'" to="/expulsiones" class="nav-button">📄 Expulsiones</router-link>
         <router-link v-if="rolUsuario === 'PROFESOR' || rolUsuario === 'TUTOR'" to="/mis-alumnos" class="nav-button">👥 Mi Tutoría</router-link>
@@ -46,13 +49,20 @@
 </template>
 
 <script>
+import axios from 'axios'
+
+const API_URL = 'http://localhost:8080/api'
+
 export default {
   name: 'App',
   data() {
     return {
       nombreProfesor: '',
       rolUsuario: 'PROFESOR',
-      esGuardiaUsuario: false
+      esGuardiaUsuario: false,
+      profesorEmail: '',
+      tareasPendientes: 0,
+      tareasRefreshTimer: null
     }
   },
   computed: {
@@ -62,7 +72,14 @@ export default {
       return this.$route.path !== '/login' && sesionValida
     }
   },
-  mounted() { this.cargarDatosUsuario() },
+  mounted() {
+    window.addEventListener('tareas-expulsion-pendientes', this.actualizarPendientesDesdeEvento)
+    this.cargarDatosUsuario()
+  },
+  beforeUnmount() {
+    window.removeEventListener('tareas-expulsion-pendientes', this.actualizarPendientesDesdeEvento)
+    this.limpiarTemporizadorPendientes()
+  },
   watch: { '$route'() { this.cargarDatosUsuario() } },
   methods: {
     cargarDatosUsuario() {
@@ -77,6 +94,7 @@ export default {
         }
 
         this.nombreProfesor = usuario.nombre
+        this.profesorEmail = usuario.email
         this.esGuardiaUsuario = usuario.esGuardia === true || usuario.esGuardia === 1 || usuario.esGuardia === '1'
         // Lógica de detección inteligente para el Sprint 1
         if (usuario.rol) {
@@ -86,17 +104,62 @@ export default {
           else if (usuario.email.includes('tutor')) this.rolUsuario = 'TUTOR'
           else this.rolUsuario = 'PROFESOR'
         }
+
+        this.configurarIndicadorPendientes()
       } else {
         this.esGuardiaUsuario = false
         this.nombreProfesor = ''
+        this.profesorEmail = ''
+        this.tareasPendientes = 0
+        this.limpiarTemporizadorPendientes()
         if (this.$route.path !== '/login') {
           this.$router.push('/login')
         }
       }
     },
+    configurarIndicadorPendientes() {
+      this.limpiarTemporizadorPendientes()
+      if (this.rolUsuario !== 'PROFESOR' || !this.profesorEmail) {
+        this.tareasPendientes = 0
+        return
+      }
+
+      this.actualizarIndicadorTareas()
+      this.tareasRefreshTimer = setInterval(() => {
+        this.actualizarIndicadorTareas()
+      }, 30000)
+    },
+    limpiarTemporizadorPendientes() {
+      if (this.tareasRefreshTimer) {
+        clearInterval(this.tareasRefreshTimer)
+        this.tareasRefreshTimer = null
+      }
+    },
+    async actualizarIndicadorTareas() {
+      if (!this.profesorEmail || this.rolUsuario !== 'PROFESOR') {
+        this.tareasPendientes = 0
+        return
+      }
+
+      try {
+        const { data } = await axios.get(`${API_URL}/tareas-expulsion/profesor/${this.profesorEmail}`)
+        const tareas = Array.isArray(data) ? data : []
+        this.tareasPendientes = tareas.filter(t => t.estado !== 'COMPLETADA').length
+      } catch (e) {
+        this.tareasPendientes = 0
+      }
+    },
+    actualizarPendientesDesdeEvento(event) {
+      const count = Number(event?.detail?.count)
+      if (!Number.isNaN(count)) {
+        this.tareasPendientes = Math.max(0, count)
+      }
+    },
     cerrarSesion() {
       if (confirm('¿Cerrar sesión?')) {
         localStorage.removeItem('profesor');
+        this.tareasPendientes = 0
+        this.limpiarTemporizadorPendientes()
         this.$router.push('/login');
       }
     }
@@ -146,6 +209,26 @@ export default {
 .logout-icon-svg { width: 22px; height: 22px; }
 .nav-links { background: #0b4e6b; display: flex; padding: 0 2rem; }
 .nav-button { padding: 1rem 1.5rem; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; }
+.nav-with-indicator { display: inline-flex; align-items: center; gap: 0.45rem; }
+.pending-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #facc15;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+  animation: pending-blink 1s infinite ease-in-out;
+}
+
+@keyframes pending-blink {
+  0%, 100% {
+    background: #facc15;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 0 0 rgba(250, 204, 21, 0.55);
+  }
+  50% {
+    background: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 0 6px rgba(245, 158, 11, 0.22);
+  }
+}
 .nav-button.router-link-active { background: white !important; color: #1a3a5a !important; font-weight: bold; }
 .container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
 * { margin: 0; padding: 0; box-sizing: border-box; }

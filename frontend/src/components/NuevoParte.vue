@@ -1,5 +1,11 @@
 <template>
   <div class="jandula-page-wrapper">
+    <transition name="toast-fade">
+      <div v-if="toastVisible" :class="['creation-toast', toastTipo === 'success' ? 'ok' : 'err']">
+        {{ toastMensaje }}
+      </div>
+    </transition>
+
     <div class="section-header">
       <h2>Registro de Incidencia</h2>
       <p>Complete el formulario para notificar una conducta contraria a las normas</p>
@@ -161,6 +167,10 @@ export default {
       conductas: [],
       mensaje: '',
       mensajeTipo: '',
+      toastVisible: false,
+      toastMensaje: '',
+      toastTipo: 'success',
+      toastTimer: null,
       guardando: false,
       cargandoAlumnos: false,
       archivoSeleccionado: null,
@@ -206,13 +216,26 @@ export default {
       try {
         if (this.archivoSeleccionado) await this.subirArchivo()
         await axios.post(`${API_URL}/partes`, this.parte)
-        this.mensaje = '✅ Parte creado con éxito'
-        this.mensajeTipo = 'success'
+        this.mensaje = ''
+        this.mensajeTipo = ''
+        this.mostrarToast('Parte creado con exito', 'success')
         this.limpiarFormulario()
       } catch (e) {
         this.mensaje = '❌ Error al guardar'
         this.mensajeTipo = 'error'
+        this.mostrarToast('Error al crear el parte', 'error')
       } finally { this.guardando = false }
+    },
+    mostrarToast(texto, tipo = 'success') {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer)
+      }
+      this.toastMensaje = texto
+      this.toastTipo = tipo
+      this.toastVisible = true
+      this.toastTimer = setTimeout(() => {
+        this.toastVisible = false
+      }, 3000)
     },
     onFileChange(e) {
       const file = e.target.files[0]
@@ -238,6 +261,11 @@ export default {
       this.parte = { profesorEmail: this.parte.profesorEmail, fecha: new Date().toISOString().split('T')[0], curso: '', alumnoId: '', descripcion: '', gravedad: 'LEVE', medidaTomada: 'AULA_CONVIVENCIA', tareas: '', archivoUrl: '', conductaId: '' }
       this.alumnos = []
     }
+  },
+  beforeUnmount() {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer)
+    }
   }
 }
 </script>
@@ -248,6 +276,30 @@ export default {
   background-color: #f4f7f6;
   min-height: 100vh;
   padding: 40px 20px;
+}
+
+.creation-toast {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -8px);
 }
 
 .section-header {

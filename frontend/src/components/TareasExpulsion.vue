@@ -112,6 +112,7 @@ export default {
         this.ediciones = Object.fromEntries(
           this.tareas.map(t => [t.id, this.normalizarDescripcionParaEdicion(t.descripcionTarea)])
         )
+        this.emitirPendientes()
       } catch (error) {
         this.tareas = []
         const status = error?.response?.status
@@ -120,6 +121,7 @@ export default {
           ? `Error al cargar tareas de expulsión (HTTP ${status})${detalle ? `: ${detalle}` : ''}`
           : 'Error al cargar tareas de expulsión.'
         this.mensajeTipo = 'error'
+        this.emitirPendientes()
       }
     },
     async guardarTarea(tareaId, completar) {
@@ -157,6 +159,11 @@ export default {
       }
 
       return texto
+    },
+    emitirPendientes() {
+      window.dispatchEvent(new CustomEvent('tareas-expulsion-pendientes', {
+        detail: { count: this.pendientes }
+      }))
     }
   }
 }
