@@ -1,0 +1,32 @@
+:root {
+  --jandula-blue-dark: #1a3a5a;
+  --jandula-blue-light: #007bff;
+  --jandula-bg: #f4f7f6;
+  --jandula-text: #33475b;
+  --jandula-border: #dcdfe6;
+  --jandula-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+body {
+  background-color: var(--jandula-bg) !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  color: var(--jandula-text);
+}
+
+/* Para que el "buscador" e inputs no salgan blancos/invisibles */
+input, select, textarea {
+  border: 1px solid var(--jandula-border) !important;
+  background-color: white !important;
+  color: var(--jandula-text) !important;
+  padding: 8px 12px;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--jandula-blue-light) !important;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
