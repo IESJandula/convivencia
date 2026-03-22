@@ -4,12 +4,12 @@
 
     <div class="filtros">
       <div class="form-group">
-        <label>Filtrar por fecha</label>
-        <input type="date" v-model="filtroFecha" @change="cargarPartes" />
+        <label>Fecha desde</label>
+        <input type="date" v-model="filtroFechaDesde" @change="cargarPartes" />
       </div>
       <div class="form-group">
-        <label>Filtrar por profesor (email)</label>
-        <input type="email" v-model="filtroProfesor" @input="cargarPartes" placeholder="profesor@instituto.es" />
+        <label>Fecha hasta</label>
+        <input type="date" v-model="filtroFechaHasta" @change="cargarPartes" />
       </div>
       <button @click="limpiarFiltros" class="btn btn-secondary">
         🔄 Limpiar filtros
@@ -23,7 +23,6 @@
     <table v-else>
       <thead>
         <tr>
-          <th>ID</th>
           <th>Fecha</th>
           <th>Profesor</th>
           <th>Alumno</th>
@@ -31,13 +30,11 @@
           <th>Gravedad</th>
           <th>Medida</th>
           <th>Estado</th>
-          <th>Cómputo</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="parte in partes" :key="parte.id">
-          <td>{{ parte.id }}</td>
           <td>{{ formatearFecha(parte.fecha) }}</td>
           <td>{{ parte.profesor.nombre }}</td>
           <td>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</td>
@@ -53,13 +50,8 @@
             </span>
           </td>
           <td>
-            <span :class="['badge', parte.estado === 'EVALUADO' ? 'badge-success' : 'badge-pending']">
-              {{ parte.estado }}
-            </span>
-          </td>
-          <td>
-            <span :class="['badge', parte.estadoComputo === 'COMPUTADO' ? 'badge-info' : 'badge-success']">
-              {{ parte.estadoComputo || 'ACTIVO' }}
+            <span :class="['badge', estaComputado(parte) ? 'badge-info' : 'badge-pending']">
+              {{ estaComputado(parte) ? 'COMPUTADO' : 'PENDIENTE' }}
             </span>
           </td>
           <td>
@@ -153,27 +145,78 @@ export default {
   data() {
     return {
       partes: [],
-      filtroFecha: '',
-      filtroProfesor: '',
+      filtroFechaDesde: '',
+      filtroFechaHasta: '',
+      emailSesion: '',
+      rolUsuario: 'PROFESOR',
       parteSeleccionado: null
     }
   },
+  computed: {
+    esVistaProfesor() {
+      return this.rolUsuario === 'PROFESOR' && Boolean(this.emailSesion)
+    }
+  },
   mounted() {
+    this.inicializarContextoUsuario()
     this.cargarPartes()
   },
   methods: {
+    inicializarContextoUsuario() {
+      const profesor = JSON.parse(localStorage.getItem('profesor') || 'null')
+      this.emailSesion = profesor?.email || ''
+      this.rolUsuario = profesor?.rol || this.inferirRolPorEmail(this.emailSesion)
+    },
+
+    inferirRolPorEmail(email) {
+      if (!email) return 'PROFESOR'
+      const emailNormalizado = email.toLowerCase()
+      if (emailNormalizado.includes('jefe')) return 'JEFATURA'
+      if (emailNormalizado.includes('tutor')) return 'TUTOR'
+      return 'PROFESOR'
+    },
+
+    coincideConRangoFechas(fechaParte) {
+      if (!fechaParte) return false
+      const fechaNormalizada = String(fechaParte).split('T')[0]
+
+      if (this.filtroFechaDesde && fechaNormalizada < this.filtroFechaDesde) {
+        return false
+      }
+
+      if (this.filtroFechaHasta && fechaNormalizada > this.filtroFechaHasta) {
+        return false
+      }
+
+      return true
+    },
+
+    estaComputado(parte) {
+      if (!parte) return false
+
+      return Boolean(
+        parte.expulsionId ||
+        parte.expulsion ||
+        parte.fechaInicioExpulsion ||
+        parte.fechaFinExpulsion ||
+        parte.estadoComputo === 'COMPUTADO' ||
+        parte.estado === 'COMPUTADO'
+      )
+    },
+
     async cargarPartes() {
       try {
-        let url = `${API_URL}/partes`
-        
-        if (this.filtroFecha) {
-          url = `${API_URL}/partes/fecha/${this.filtroFecha}`
-        } else if (this.filtroProfesor) {
-          url = `${API_URL}/partes/profesor/${this.filtroProfesor}`
+        if (this.esVistaProfesor) {
+          const response = await axios.get(`${API_URL}/partes/profesor/${this.emailSesion}`)
+          const partesProfesor = Array.isArray(response.data) ? response.data : []
+          this.partes = partesProfesor.filter(parte => this.coincideConRangoFechas(parte.fecha))
+          console.log('Partes del profesor cargados:', this.partes)
+          return
         }
-        
-        const response = await axios.get(url)
-        this.partes = response.data
+
+        const response = await axios.get(`${API_URL}/partes`)
+        const partes = Array.isArray(response.data) ? response.data : []
+        this.partes = partes.filter(parte => this.coincideConRangoFechas(parte.fecha))
         console.log('Partes cargados:', this.partes)
       } catch (error) {
         console.error('Error al cargar partes:', error)
@@ -181,8 +224,8 @@ export default {
     },
     
     limpiarFiltros() {
-      this.filtroFecha = ''
-      this.filtroProfesor = ''
+      this.filtroFechaDesde = ''
+      this.filtroFechaHasta = ''
       this.cargarPartes()
     },
     
@@ -257,6 +300,45 @@ export default {
 .filtros .form-group {
   flex: 1;
   margin-bottom: 0;
+  border: 1px solid #d9dee8;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #d9dee8;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+thead th {
+  border-bottom: 1px solid #d9dee8;
+  border-right: 1px solid #e8ecf3;
+  padding: 0.8rem;
+  background: #f4f6fb;
+}
+
+thead th:last-child {
+  border-right: none;
+}
+
+tbody td {
+  border-bottom: 1px solid #e8ecf3;
+  border-right: 1px solid #eef1f6;
+  padding: 0.8rem;
+}
+
+tbody td:last-child {
+  border-right: none;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .sin-datos {
@@ -349,6 +431,7 @@ export default {
 .detalle-item {
   padding: 1rem;
   background: #f8f9fa;
+  border: 1px solid #d9dee8;
   border-radius: 8px;
 }
 
