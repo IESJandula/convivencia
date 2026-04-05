@@ -10,7 +10,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class SesionConvivenciaService {
@@ -49,10 +48,6 @@ public class SesionConvivenciaService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Profesor inactivo");
         }
 
-        if (!Boolean.TRUE.equals(profesorGuardia.getEsGuardia())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo el profesorado de guardia puede evaluar en aula de convivencia");
-        }
-
         LocalDate fechaSesion = dto.getFecha() != null ? dto.getFecha() : LocalDate.now();
         String tramo = normalizarTramo(dto.getTramoHorario());
 
@@ -83,12 +78,12 @@ public class SesionConvivenciaService {
         return sesionRepository.findByFechaAndTramoHorario(fecha, normalizarTramo(tramo));
     }
 
-    public Optional<SesionConvivencia> obtenerPorParteId(Integer parteId) {
+    public List<SesionConvivencia> obtenerPorParteId(Integer parteId) {
         if (parteId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe indicar el parte");
         }
 
-        return sesionRepository.findByParteId(parteId);
+        return sesionRepository.findByParteIdOrderByFechaDescTramoHorarioAsc(parteId);
     }
 
     private String normalizarTramo(String tramo) {

@@ -100,30 +100,47 @@
           <div class="detalle-item">
             <strong>Estado cómputo:</strong> {{ parteSeleccionado.estadoComputo || 'ACTIVO' }}
           </div>
-          <div v-if="parteSeleccionado.valoracionConvivencia" class="detalle-item full-width valoracion-section">
-            <strong>Valoración del profesor en aula de convivencia:</strong>
-            <div class="valoracion-grid">
-              <div class="valoracion-campo">
-                <span class="valoracion-label">Profesor de guardia</span>
-                <span class="valoracion-value">{{ obtenerNombreProfesorGuardia(parteSeleccionado.valoracionConvivencia) }}</span>
-              </div>
-              <div class="valoracion-campo">
-                <span class="valoracion-label">Comportamiento</span>
-                <span class="badge" :class="claseComportamiento(parteSeleccionado.valoracionConvivencia)">
-                  {{ textoComportamiento(parteSeleccionado.valoracionConvivencia) }}
-                </span>
-              </div>
-              <div class="valoracion-campo">
-                <span class="valoracion-label">Trabaja</span>
-                <span class="badge" :class="claseTrabaja(parteSeleccionado.valoracionConvivencia)">
-                  {{ textoTrabaja(parteSeleccionado.valoracionConvivencia) }}
-                </span>
-              </div>
-              <div class="valoracion-campo full-row">
-                <span class="valoracion-label">Observaciones</span>
-                <p class="valoracion-observaciones">
-                  {{ textoObservaciones(parteSeleccionado.valoracionConvivencia) }}
-                </p>
+          <div v-if="tieneValoracionesConvivencia" class="detalle-item full-width valoracion-section">
+            <strong>Evaluaciones en aula de convivencia:</strong>
+            <div class="valoracion-lista">
+              <div
+                v-for="(valoracion, index) in parteSeleccionado.valoracionesConvivencia"
+                :key="valoracion.id || `${valoracion.fecha || 'sin-fecha'}-${valoracion.tramoHorario || 'sin-tramo'}-${index}`"
+                class="valoracion-card"
+              >
+                <div class="valoracion-card-header">Evaluación {{ index + 1 }}</div>
+                <div class="valoracion-grid">
+                  <div class="valoracion-campo">
+                    <span class="valoracion-label">Profesor</span>
+                    <span class="valoracion-value">{{ obtenerNombreProfesorGuardia(valoracion) }}</span>
+                  </div>
+                  <div class="valoracion-campo">
+                    <span class="valoracion-label">Tramo horario</span>
+                    <span class="valoracion-value">{{ textoTramoHorario(valoracion) }}</span>
+                  </div>
+                  <div class="valoracion-campo">
+                    <span class="valoracion-label">Fecha</span>
+                    <span class="valoracion-value">{{ formatearFecha(valoracion.fecha) || 'No indicada' }}</span>
+                  </div>
+                  <div class="valoracion-campo">
+                    <span class="valoracion-label">Comportamiento</span>
+                    <span class="badge" :class="claseComportamiento(valoracion)">
+                      {{ textoComportamiento(valoracion) }}
+                    </span>
+                  </div>
+                  <div class="valoracion-campo">
+                    <span class="valoracion-label">Trabaja</span>
+                    <span class="badge" :class="claseTrabaja(valoracion)">
+                      {{ textoTrabaja(valoracion) }}
+                    </span>
+                  </div>
+                  <div class="valoracion-campo full-row">
+                    <span class="valoracion-label">Observaciones</span>
+                    <p class="valoracion-observaciones">
+                      {{ textoObservaciones(valoracion) }}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -182,6 +199,10 @@ export default {
   computed: {
     esVistaProfesor() {
       return this.rolUsuario === 'PROFESOR' && Boolean(this.emailSesion)
+    },
+    tieneValoracionesConvivencia() {
+      return Array.isArray(this.parteSeleccionado?.valoracionesConvivencia)
+        && this.parteSeleccionado.valoracionesConvivencia.length > 0
     }
   },
   mounted() {
@@ -262,7 +283,7 @@ export default {
 
       this.parteSeleccionado = {
         ...parte,
-        valoracionConvivencia: null
+        valoracionesConvivencia: []
       }
 
       if (parte.medidaTomada !== 'AULA_CONVIVENCIA') {
@@ -271,16 +292,15 @@ export default {
 
       try {
         const response = await axios.get(`${API_URL}/sesiones/parte/${parte.id}`)
-        if (response?.status === 200 && response.data) {
+        if (response?.status === 200) {
+          const valoraciones = Array.isArray(response.data) ? response.data : []
           this.parteSeleccionado = {
             ...this.parteSeleccionado,
-            valoracionConvivencia: response.data
+            valoracionesConvivencia: valoraciones
           }
         }
       } catch (error) {
-        if (error?.response?.status !== 204) {
-          console.error('Error al cargar valoración de convivencia:', error)
-        }
+        console.error('Error al cargar valoraciones de convivencia:', error)
       }
     },
     
@@ -296,6 +316,12 @@ export default {
     obtenerNombreProfesorGuardia(valoracion) {
       if (!valoracion) return 'No indicado'
       return valoracion.profesorGuardia?.nombre || 'No indicado'
+    },
+
+    textoTramoHorario(valoracion) {
+      const tramo = valoracion?.tramoHorario
+      if (!tramo) return 'No indicado'
+      return `${tramo}ª hora`
     },
 
     textoComportamiento(valoracion) {
@@ -546,6 +572,25 @@ tbody tr:last-child td {
 .valoracion-section {
   border: 2px solid #b9d3ff;
   background: #f4f8ff;
+}
+
+.valoracion-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.valoracion-card {
+  background: #ffffff;
+  border: 1px solid #d9e6ff;
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.valoracion-card-header {
+  font-weight: 700;
+  color: #2f466e;
+  margin-bottom: 0.65rem;
 }
 
 .valoracion-grid {

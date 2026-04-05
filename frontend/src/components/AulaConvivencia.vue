@@ -2,9 +2,9 @@
   <div class="card">
     <div class="header-guardia">
       <div>
-        <h2>🏫 Aula de Convivencia - Profesor de Guardia</h2>
+        <h2>🏫 Aula de Convivencia</h2>
         <p class="info-guardia">
-          <strong>Profesor de guardia:</strong> {{ profesorGuardia }} | 
+          <strong>Profesor:</strong> {{ profesorGuardia }} | 
           <strong>Fecha:</strong> {{ formatearFecha(fecha) }} | 
           <strong>Hora:</strong> {{ tramoActual }}ª
         </p>
@@ -31,7 +31,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Email Profesor Guardia</label>
+        <label>Email Profesor</label>
         <input 
           type="email" 
           v-model="profesorGuardia" 
@@ -44,10 +44,6 @@
 
     <div v-if="mensaje" :class="['alert', mensajeTipo === 'success' ? 'alert-success' : 'alert-error']">
       {{ mensaje }}
-    </div>
-
-    <div v-if="!esGuardia" class="alert alert-error">
-      Solo el profesorado de guardia puede evaluar en el aula de convivencia.
     </div>
 
     <div v-if="cargando" class="loading">
@@ -121,7 +117,7 @@
       </table>
 
       <div class="form-actions">
-        <button @click="guardarSesiones" class="btn btn-success" :disabled="guardando || !esGuardia">
+        <button @click="guardarSesiones" class="btn btn-success" :disabled="guardando">
           {{ guardando ? '⏳ Guardando...' : '💾 Guardar Evaluaciones' }}
         </button>
       </div>
@@ -180,7 +176,6 @@ export default {
       fecha: new Date().toISOString().split('T')[0],
       tramoActual: this.obtenerTramoActual(),
       profesorGuardia: 'antonio.oliver@g.educaand.es',
-      esGuardia: false,
       modalTareas: null,
       mensaje: '',
       mensajeTipo: '',
@@ -190,19 +185,13 @@ export default {
   },
   mounted() {
     this.inicializarProfesorGuardia()
-    if (this.esGuardia) {
-      this.cargarPartes()
-    } else {
-      this.mensaje = '❌ Solo el profesorado de guardia puede evaluar en aula de convivencia'
-      this.mensajeTipo = 'error'
-    }
+    this.cargarPartes()
   },
   methods: {
     inicializarProfesorGuardia() {
       const profesor = JSON.parse(localStorage.getItem('profesor') || 'null')
       if (profesor?.email) {
         this.profesorGuardia = profesor.email
-        this.esGuardia = profesor.esGuardia === true || profesor.esGuardia === 1 || profesor.esGuardia === '1'
       }
     },
 
@@ -223,7 +212,7 @@ export default {
       }
 
       if (status === 404) {
-        return 'No se encontró el parte o el profesor de guardia'
+        return 'No se encontró el parte o el profesor'
       }
 
       if (status >= 500) {
@@ -245,10 +234,6 @@ export default {
     },
     
     async cargarPartes() {
-      if (!this.esGuardia) {
-        return
-      }
-
       this.cargando = true
       this.mensaje = ''
       
@@ -305,12 +290,6 @@ export default {
     },
     
     async guardarSesiones() {
-      if (!this.esGuardia) {
-        this.mensaje = '❌ Solo el profesorado de guardia puede evaluar en aula de convivencia'
-        this.mensajeTipo = 'error'
-        return
-      }
-
       // Validar que al menos un alumno tenga evaluación
       const partesConEvaluacion = this.partesAula.filter(
         parte => parte.comportamiento || parte.trabaja !== null
@@ -323,7 +302,7 @@ export default {
       }
       
       if (!this.profesorGuardia) {
-        this.mensaje = '⚠️ Por favor, ingrese el email del profesor de guardia'
+        this.mensaje = '⚠️ Por favor, ingrese el email del profesor'
         this.mensajeTipo = 'error'
         return
       }

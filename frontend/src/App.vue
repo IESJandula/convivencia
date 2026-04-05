@@ -24,7 +24,7 @@
 
       <div class="nav-links">
         <router-link to="/nuevo" class="nav-button">📝 Nuevo Parte</router-link>
-        <router-link v-if="rolUsuario === 'PROFESOR' && esGuardiaUsuario" to="/aula-convivencia" class="nav-button">🏫 Aula Convivencia</router-link>
+        <router-link v-if="rolUsuario === 'PROFESOR'" to="/aula-convivencia" class="nav-button">🏫 Aula Convivencia</router-link>
         <router-link v-if="rolUsuario === 'PROFESOR'" to="/tareas-expulsion" class="nav-button nav-with-indicator">
           📚 Tareas Expulsión
           <span v-if="tareasPendientes > 0" class="pending-dot" :title="`Tienes ${tareasPendientes} tarea(s) pendiente(s)`"></span>

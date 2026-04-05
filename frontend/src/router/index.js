@@ -133,15 +133,6 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 5. Aula de convivencia solo para profesorado de guardia
-  if (to.path === '/aula-convivencia' && profesor) {
-    const esGuardia = profesor.esGuardia === true || profesor.esGuardia === 1 || profesor.esGuardia === '1'
-    if (!esGuardia) {
-      alert('Acceso denegado: solo el profesorado de guardia puede evaluar en aula de convivencia')
-      return next('/nuevo')
-    }
-  }
-
   next()
 })
 

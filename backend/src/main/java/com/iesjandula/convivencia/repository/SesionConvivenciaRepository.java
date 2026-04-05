@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface SesionConvivenciaRepository extends JpaRepository<SesionConvivencia, Integer> {
-    Optional<SesionConvivencia> findByParteId(Integer parteId);
+    List<SesionConvivencia> findByParteIdOrderByFechaDescTramoHorarioAsc(Integer parteId);
     Optional<SesionConvivencia> findByParteIdAndFechaAndTramoHorario(Integer parteId, LocalDate fecha, String tramoHorario);
     List<SesionConvivencia> findByFechaAndTramoHorario(LocalDate fecha, String tramoHorario);
     List<SesionConvivencia> findByProfesorGuardiaEmail(String profesorEmail);
