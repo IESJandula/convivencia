@@ -36,7 +36,7 @@
       </div>
     </header>
 
-    <div class="container">
+    <div :class="['container', { 'container-wide': esRutaAulaConvivencia }]">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <keep-alive include="ValidarSanciones">
@@ -70,6 +70,9 @@ export default {
       const usuario = JSON.parse(localStorage.getItem('profesor') || 'null')
       const sesionValida = Boolean(usuario?.email)
       return this.$route.path !== '/login' && sesionValida
+    },
+    esRutaAulaConvivencia() {
+      return this.$route.path === '/aula-convivencia'
     }
   },
   mounted() {
@@ -252,6 +255,7 @@ export default {
 }
 .nav-button.router-link-active { background: white !important; color: #1a3a5a !important; font-weight: bold; }
 .container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
+.container.container-wide { max-width: 1520px; padding: 0 1rem; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; background: #f0f2f5; }
 </style>

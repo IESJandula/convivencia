@@ -60,6 +60,16 @@
 
     <div v-else class="tabla-container">
       <table>
+        <colgroup>
+          <col class="col-n" />
+          <col class="col-alumno" />
+          <col class="col-grupo" />
+          <col class="col-doc" />
+          <col class="col-tareas" />
+          <col class="col-trabaja" />
+          <col class="col-comportamiento" />
+          <col class="col-observaciones" />
+        </colgroup>
         <thead>
           <tr>
             <th>N</th>
@@ -69,6 +79,7 @@
             <th>Tareas</th>
             <th>Trabaja</th>
             <th>Comportamiento</th>
+            <th>Observaciones</th>
           </tr>
         </thead>
         <tbody>
@@ -94,7 +105,7 @@
                 @click="verTareas(parte)" 
                 class="btn-small btn-info"
               >
-                Ver tareas [+]
+                Ver
               </button>
             </td>
             <td>
@@ -111,6 +122,14 @@
                 <option value="REGULAR">😐 Regular</option>
                 <option value="MAL">😠 Mal</option>
               </select>
+            </td>
+            <td>
+              <textarea
+                v-model="parte.observaciones"
+                class="textarea-small"
+                rows="2"
+                placeholder="Añadir observaciones del tramo horario"
+              ></textarea>
             </td>
           </tr>
         </tbody>
@@ -256,7 +275,8 @@ export default {
           return {
             ...parte,
             trabaja: sesionGuardada?.trabaja ?? null,
-            comportamiento: sesionGuardada?.comportamiento || ''
+            comportamiento: sesionGuardada?.comportamiento || '',
+            observaciones: sesionGuardada?.observaciones || ''
           }
         })
         
@@ -292,7 +312,7 @@ export default {
     async guardarSesiones() {
       // Validar que al menos un alumno tenga evaluación
       const partesConEvaluacion = this.partesAula.filter(
-        parte => parte.comportamiento || parte.trabaja !== null
+        parte => parte.comportamiento || parte.trabaja !== null || (parte.observaciones && parte.observaciones.trim() !== '')
       )
       
       if (partesConEvaluacion.length === 0) {
@@ -322,7 +342,7 @@ export default {
               tramoHorario: this.tramoActual,
               comportamiento: parte.comportamiento || null,
               trabaja: parte.trabaja,
-              observaciones: ''
+              observaciones: parte.observaciones ? parte.observaciones.trim() : ''
             })
             guardados++
           } catch (error) {
@@ -436,11 +456,12 @@ export default {
 }
 
 .tabla-container {
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin-top: 1rem;
   background: white;
@@ -455,18 +476,34 @@ table thead {
 }
 
 table th {
-  padding: 1.25rem;
+  padding: 0.6rem 0.45rem;
   text-align: left;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+table th + th {
+  border-left: 1px solid rgba(255,255,255,0.28);
 }
 
 table td {
-  padding: 1.25rem;
+  padding: 0.55rem 0.45rem;
   border-bottom: 1px solid #e0e0e0;
+  vertical-align: top;
+  overflow-wrap: anywhere;
 }
+
+.col-n { width: 4%; }
+.col-alumno { width: 20%; }
+.col-grupo { width: 10%; }
+.col-doc { width: 6%; }
+.col-tareas { width: 8%; }
+.col-trabaja { width: 12%; }
+.col-comportamiento { width: 16%; }
+.col-observaciones { width: 24%; }
 
 table tbody tr:hover {
   background: #f8f9fa;
@@ -480,7 +517,7 @@ table tbody tr:last-child td {
   text-align: center;
   font-weight: 600;
   color: #667eea;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
 }
 
 .alumno-nombre {
@@ -496,10 +533,26 @@ table tbody tr:last-child td {
   font-size: 1.2rem;
 }
 
+.textarea-small {
+  width: 100%;
+  min-width: 0;
+  padding: 0.4rem;
+  border: 1px solid #d9dee8;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.3;
+}
+
+.alumno-nombre strong {
+  display: block;
+}
+
 .btn-icon {
   background: none;
   border: none;
-  font-size: 1.8rem;
+  font-size: 1.1rem;
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -509,11 +562,11 @@ table tbody tr:last-child td {
 }
 
 .btn-small {
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 0.55rem;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   transition: all 0.3s;
 }
 
@@ -528,11 +581,11 @@ table tbody tr:last-child td {
 }
 
 .select-small {
-  padding: 0.6rem;
+  padding: 0.38rem;
   border: 2px solid #e0e0e0;
   border-radius: 6px;
   width: 100%;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   transition: border-color 0.3s;
   cursor: pointer;
 }
@@ -690,12 +743,22 @@ table tbody tr:last-child td {
   }
   
   table {
-    font-size: 0.85rem;
+    font-size: 0.72rem;
   }
-  
+
   table th,
   table td {
-    padding: 0.75rem 0.5rem;
+    padding: 0.4rem 0.3rem;
+  }
+
+  .btn-small,
+  .select-small,
+  .textarea-small {
+    font-size: 0.72rem;
+  }
+
+  .btn-icon {
+    font-size: 1rem;
   }
   
   .modal-content {
