@@ -319,10 +319,6 @@ public class ExpulsionService {
         List<ParteExpulsion> partesVinculados = parteExpulsionRepository.findByExpulsionId(expulsionId);
         List<TareaExpulsion> tareas = tareaExpulsionRepository.findByExpulsionId(expulsionId);
 
-        if (!puedeGenerarCartaExpulsion(expulsionId)) {
-            throw new IllegalStateException("No se puede generar la carta: todo el profesorado debe completar y enviar sus actividades.");
-        }
-
         try (PDDocument document = new PDDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             PDPage page = new PDPage(PDRectangle.A4);
             document.addPage(page);
@@ -524,7 +520,9 @@ public class ExpulsionService {
             return false;
         }
 
-        return tareas.stream().anyMatch(t -> esActividadProfesorValida(t.getDescripcionTarea()));
+        return tareas.stream().allMatch(t ->
+                t.getEstado() == TareaExpulsion.Estado.COMPLETADA
+                        && esActividadProfesorValida(t.getDescripcionTarea()));
     }
 
     private boolean esActividadProfesorValida(String descripcionTarea) {

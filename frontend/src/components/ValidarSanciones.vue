@@ -42,7 +42,7 @@
             <td>
               <button
                 class="btn btn-primary"
-                :disabled="cargandoPdfId === exp.expulsionId || !exp.puedeGenerarPdf"
+                :disabled="cargandoPdfId === exp.expulsionId"
                 @click="descargarPdfExpulsion(exp.expulsionId)"
               >
                 {{ cargandoPdfId === exp.expulsionId ? 'Generando...' : 'Generar PDF' }}
@@ -429,13 +429,6 @@ export default {
 
       this.cargandoPdfId = expulsionId
       try {
-        const { data: estadoPdf } = await axios.get(`${API_URL}/expulsiones/${expulsionId}/puede-generar-pdf`)
-        if (!estadoPdf?.puedeGenerar) {
-          this.mensaje = 'Aún no se puede generar la carta PDF: debe existir al menos una tarea agregada con actividad real.'
-          this.mensajeTipo = 'error'
-          return
-        }
-
         const response = await axios.get(`${API_URL}/expulsiones/${expulsionId}/pdf`, {
           responseType: 'blob'
         })
