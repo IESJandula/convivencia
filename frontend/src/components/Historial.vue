@@ -100,6 +100,33 @@
           <div class="detalle-item">
             <strong>Estado cómputo:</strong> {{ parteSeleccionado.estadoComputo || 'ACTIVO' }}
           </div>
+          <div v-if="parteSeleccionado.valoracionConvivencia" class="detalle-item full-width valoracion-section">
+            <strong>Valoración del profesor en aula de convivencia:</strong>
+            <div class="valoracion-grid">
+              <div class="valoracion-campo">
+                <span class="valoracion-label">Profesor de guardia</span>
+                <span class="valoracion-value">{{ obtenerNombreProfesorGuardia(parteSeleccionado.valoracionConvivencia) }}</span>
+              </div>
+              <div class="valoracion-campo">
+                <span class="valoracion-label">Comportamiento</span>
+                <span class="badge" :class="claseComportamiento(parteSeleccionado.valoracionConvivencia)">
+                  {{ textoComportamiento(parteSeleccionado.valoracionConvivencia) }}
+                </span>
+              </div>
+              <div class="valoracion-campo">
+                <span class="valoracion-label">Trabaja</span>
+                <span class="badge" :class="claseTrabaja(parteSeleccionado.valoracionConvivencia)">
+                  {{ textoTrabaja(parteSeleccionado.valoracionConvivencia) }}
+                </span>
+              </div>
+              <div class="valoracion-campo full-row">
+                <span class="valoracion-label">Observaciones</span>
+                <p class="valoracion-observaciones">
+                  {{ textoObservaciones(parteSeleccionado.valoracionConvivencia) }}
+                </p>
+              </div>
+            </div>
+          </div>
           <div v-if="parteSeleccionado.tareas" class="detalle-item full-width">
             <strong>Tareas:</strong>
             <p>{{ parteSeleccionado.tareas }}</p>
@@ -229,10 +256,32 @@ export default {
       this.cargarPartes()
     },
     
-    verDetalle(parte) {
+    async verDetalle(parte) {
       console.log('Parte seleccionado:', parte)
       console.log('Archivo URL:', parte.archivoUrl)
-      this.parteSeleccionado = parte
+
+      this.parteSeleccionado = {
+        ...parte,
+        valoracionConvivencia: null
+      }
+
+      if (parte.medidaTomada !== 'AULA_CONVIVENCIA') {
+        return
+      }
+
+      try {
+        const response = await axios.get(`${API_URL}/sesiones/parte/${parte.id}`)
+        if (response?.status === 200 && response.data) {
+          this.parteSeleccionado = {
+            ...this.parteSeleccionado,
+            valoracionConvivencia: response.data
+          }
+        }
+      } catch (error) {
+        if (error?.response?.status !== 204) {
+          console.error('Error al cargar valoración de convivencia:', error)
+        }
+      }
     },
     
     cerrarModal() {
@@ -242,6 +291,46 @@ export default {
     formatearFecha(fecha) {
       if (!fecha) return ''
       return new Date(fecha).toLocaleDateString('es-ES')
+    },
+
+    obtenerNombreProfesorGuardia(valoracion) {
+      if (!valoracion) return 'No indicado'
+      return valoracion.profesorGuardia?.nombre || 'No indicado'
+    },
+
+    textoComportamiento(valoracion) {
+      if (!valoracion?.comportamiento) return 'No indicado'
+
+      const comportamiento = valoracion.comportamiento.toUpperCase()
+      if (comportamiento === 'BIEN') return 'Bien'
+      if (comportamiento === 'REGULAR') return 'Regular'
+      if (comportamiento === 'MAL') return 'Mal'
+
+      return valoracion.comportamiento
+    },
+
+    claseComportamiento(valoracion) {
+      const comportamiento = valoracion?.comportamiento?.toUpperCase()
+      if (comportamiento === 'BIEN') return 'badge-success'
+      if (comportamiento === 'REGULAR') return 'badge-warning'
+      if (comportamiento === 'MAL') return 'badge-danger'
+      return 'badge-info'
+    },
+
+    textoTrabaja(valoracion) {
+      if (valoracion?.trabaja === true) return 'Sí'
+      if (valoracion?.trabaja === false) return 'No'
+      return 'No indicado'
+    },
+
+    claseTrabaja(valoracion) {
+      if (valoracion?.trabaja === true) return 'badge-success'
+      if (valoracion?.trabaja === false) return 'badge-danger'
+      return 'badge-info'
+    },
+
+    textoObservaciones(valoracion) {
+      return valoracion?.observaciones || 'Sin observaciones'
     },
     
     obtenerUrlCompleta(url) {
@@ -454,6 +543,52 @@ tbody tr:last-child td {
   border: 2px solid #667eea;
 }
 
+.valoracion-section {
+  border: 2px solid #b9d3ff;
+  background: #f4f8ff;
+}
+
+.valoracion-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.valoracion-campo {
+  background: #fff;
+  border: 1px solid #d9e6ff;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.valoracion-campo.full-row {
+  grid-column: 1 / -1;
+}
+
+.valoracion-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4f5d79;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.valoracion-value {
+  font-size: 1rem;
+  color: #20324d;
+  font-weight: 600;
+}
+
+.valoracion-observaciones {
+  margin: 0;
+  color: #20324d;
+  line-height: 1.45;
+}
+
 .preview-imagen-container {
   margin: 1rem 0;
   text-align: center;
@@ -499,5 +634,11 @@ tbody tr:last-child td {
   color: #666;
   font-size: 0.8rem;
   word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .valoracion-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

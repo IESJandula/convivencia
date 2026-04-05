@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class SesionConvivenciaService {
@@ -80,6 +81,14 @@ public class SesionConvivenciaService {
 
     public List<SesionConvivencia> listarPorFechaYTramo(LocalDate fecha, String tramo) {
         return sesionRepository.findByFechaAndTramoHorario(fecha, normalizarTramo(tramo));
+    }
+
+    public Optional<SesionConvivencia> obtenerPorParteId(Integer parteId) {
+        if (parteId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe indicar el parte");
+        }
+
+        return sesionRepository.findByParteId(parteId);
     }
 
     private String normalizarTramo(String tramo) {

@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/sesiones")
@@ -47,5 +48,11 @@ public class SesionConvivenciaController {
             @PathVariable String tramo
     ) {
         return ResponseEntity.ok(sesionService.listarPorFechaYTramo(fecha, tramo));
+    }
+
+    @GetMapping("/parte/{parteId}")
+    public ResponseEntity<SesionConvivencia> obtenerPorParte(@PathVariable Integer parteId) {
+        Optional<SesionConvivencia> sesion = sesionService.obtenerPorParteId(parteId);
+        return sesion.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 }
