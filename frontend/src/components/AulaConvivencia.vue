@@ -1,24 +1,25 @@
 <template>
   <div class="card">
-    <div class="header-guardia">
-      <div>
-        <h2>🏫 Aula de Convivencia</h2>
-        <p class="info-guardia">
-          <strong>Profesor:</strong> {{ profesorGuardia }} | 
-          <strong>Fecha:</strong> {{ formatearFecha(fecha) }} | 
-          <strong>Hora:</strong> {{ tramoActual }}ª
-        </p>
+    <transition name="toast-fade">
+      <div v-if="toastVisible" :class="['creation-toast', toastTipo === 'success' ? 'ok' : 'err']">
+        {{ toastMensaje }}
       </div>
-      <button @click="cargarPartes" class="btn btn-primary">
-        🔄 Actualizar
-      </button>
+    </transition>
+
+    <div class="header-guardia">
+      <h2>🏫 Aula de Convivencia</h2>
+      <p class="subtitulo-guardia">Seguimiento del alumnado derivado por tramo horario</p>
+      <div class="header-meta">
+        <span class="meta-pill">
+          <strong>Profesor:</strong> {{ profesorNombre || 'Sin identificar' }}
+        </span>
+        <span class="meta-pill">
+          <strong>Tramo:</strong> {{ etiquetaTramo(tramoActual) }}
+        </span>
+      </div>
     </div>
 
     <div class="filtros">
-      <div class="form-group">
-        <label>Fecha</label>
-        <input type="date" v-model="fecha" @change="cargarPartes" />
-      </div>
       <div class="form-group">
         <label>Tramo Horario</label>
         <select v-model="tramoActual" @change="cargarPartes">
@@ -30,15 +31,9 @@
           <option value="6">6ª (13:45 - 14:45)</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>Email Profesor</label>
-        <input 
-          type="email" 
-          v-model="profesorGuardia" 
-          placeholder="profesor@instituto.es"
-          :readonly="true"
-          :disabled="true"
-        />
+      <div class="filtros-info">
+        <span class="filtros-info-item">👥 Alumnos en aula: <strong>{{ partesAula.length }}</strong></span>
+        <span class="filtros-info-item">📝 Recuerda guardar tras evaluar.</span>
       </div>
     </div>
 
@@ -136,7 +131,7 @@
       </table>
 
       <div class="form-actions">
-        <button @click="guardarSesiones" class="btn btn-success" :disabled="guardando">
+        <button @click="guardarSesiones" class="btn btn-success btn-guardar-evaluaciones" :disabled="guardando">
           {{ guardando ? '⏳ Guardando...' : '💾 Guardar Evaluaciones' }}
         </button>
       </div>
@@ -195,9 +190,14 @@ export default {
       fecha: new Date().toISOString().split('T')[0],
       tramoActual: this.obtenerTramoActual(),
       profesorGuardia: 'antonio.oliver@g.educaand.es',
+      profesorNombre: '',
       modalTareas: null,
       mensaje: '',
       mensajeTipo: '',
+      toastVisible: false,
+      toastMensaje: '',
+      toastTipo: 'success',
+      toastTimer: null,
       cargando: false,
       guardando: false
     }
@@ -211,7 +211,20 @@ export default {
       const profesor = JSON.parse(localStorage.getItem('profesor') || 'null')
       if (profesor?.email) {
         this.profesorGuardia = profesor.email
+        this.profesorNombre = profesor.nombre || ''
       }
+    },
+
+    etiquetaTramo(tramo) {
+      const tramos = {
+        '1': '1ª (8:15 - 9:15)',
+        '2': '2ª (9:15 - 10:15)',
+        '3': '3ª (10:15 - 11:15)',
+        '4': '4ª (11:45 - 12:45)',
+        '5': '5ª (12:45 - 13:45)',
+        '6': '6ª (13:45 - 14:45)'
+      }
+      return tramos[tramo] || `${tramo}ª`
     },
 
     extraerMensajeError(error, mensajeDefecto = 'Error al guardar evaluación') {
@@ -279,11 +292,7 @@ export default {
             observaciones: sesionGuardada?.observaciones || ''
           }
         })
-        
-        if (this.partesAula.length > 0) {
-          this.mensaje = `✅ Se encontraron ${this.partesAula.length} alumno(s) en el aula de convivencia`
-          this.mensajeTipo = 'success'
-        }
+
       } catch (error) {
         console.error('Error al cargar partes:', error)
         this.mensaje = '❌ Error al cargar los partes del aula de convivencia'
@@ -318,12 +327,14 @@ export default {
       if (partesConEvaluacion.length === 0) {
         this.mensaje = '⚠️ Por favor, evalúe al menos a un alumno antes de guardar'
         this.mensajeTipo = 'error'
+        this.mostrarToast('Evalua al menos a un alumno antes de guardar', 'error')
         return
       }
       
       if (!this.profesorGuardia) {
         this.mensaje = '⚠️ Por favor, ingrese el email del profesor'
         this.mensajeTipo = 'error'
+        this.mostrarToast('No se ha identificado el profesor', 'error')
         return
       }
       
@@ -353,8 +364,9 @@ export default {
         }
         
         if (errores === 0) {
-          this.mensaje = `✅ Guardado con éxito (${guardados} evaluación(es))`
-          this.mensajeTipo = 'success'
+          this.mensaje = ''
+          this.mensajeTipo = ''
+          this.mostrarToast('Guardado con exito', 'success')
           
           setTimeout(() => {
             this.mensaje = ''
@@ -363,62 +375,136 @@ export default {
         } else {
           this.mensaje = `⚠️ Se guardaron ${guardados} evaluación(es), pero ${errores} tuvieron errores${ultimoError ? `: ${ultimoError}` : ''}`
           this.mensajeTipo = 'error'
+          this.mostrarToast(`Guardadas ${guardados} evaluaciones con ${errores} error(es)`, 'error')
         }
       } catch (error) {
         console.error('Error general:', error)
         this.mensaje = `❌ ${this.extraerMensajeError(error, 'Error al guardar las evaluaciones')}`
         this.mensajeTipo = 'error'
+        this.mostrarToast('Error al guardar las evaluaciones', 'error')
       } finally {
         this.guardando = false
       }
     },
-    
-    formatearFecha(fecha) {
-      if (!fecha) return ''
-      return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {
-        weekday: 'long',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      })
+
+    mostrarToast(texto, tipo = 'success') {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer)
+      }
+      this.toastMensaje = texto
+      this.toastTipo = tipo
+      this.toastVisible = true
+      this.toastTimer = setTimeout(() => {
+        this.toastVisible = false
+      }, 3000)
+    }
+  },
+  beforeUnmount() {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer)
     }
   }
 }
 </script>
 
 <style scoped>
+.creation-toast {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2500;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+}
+
+.creation-toast.ok {
+  background: linear-gradient(135deg, #0c9b58 0%, #0d7a4a 100%);
+}
+
+.creation-toast.err {
+  background: linear-gradient(135deg, #d43d2f 0%, #b42318 100%);
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -8px);
+}
+
 .header-guardia {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
   margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
+  padding-bottom: 1.2rem;
   border-bottom: 3px solid #667eea;
 }
 
-.info-guardia {
-  color: #666;
-  margin-top: 0.75rem;
-  font-size: 1.05rem;
+.subtitulo-guardia {
+  color: #5f6b7a;
+  font-size: 0.96rem;
+  margin: 0;
 }
 
-.info-guardia strong {
-  color: #333;
+.header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.meta-pill {
+  background: #f4f7ff;
+  border: 1px solid #d7e0ff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.88rem;
+}
+
+.meta-pill strong {
+  color: #1f2937;
 }
 
 .filtros {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 1rem;
   margin-bottom: 2rem;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 2rem;
+  padding: 1.3rem;
   border-radius: 12px;
   border: 2px solid #e0e0e0;
 }
 
 .filtros .form-group {
   margin-bottom: 0;
+}
+
+.filtros-info {
+  background: #ffffff;
+  border: 1px solid #d8e1ef;
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  justify-content: center;
+}
+
+.filtros-info-item {
+  font-size: 0.9rem;
+  color: #334155;
 }
 
 .loading {
@@ -600,6 +686,42 @@ table tbody tr:last-child td {
   text-align: right;
 }
 
+.btn-guardar-evaluaciones {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 45%, #1e40af 100%);
+  color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 12px;
+  padding: 0.75rem 1.3rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.25);
+  transition: transform 0.16s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.btn-guardar-evaluaciones:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.04);
+  box-shadow: 0 14px 24px rgba(29, 78, 216, 0.35);
+}
+
+.btn-guardar-evaluaciones:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 6px 12px rgba(29, 78, 216, 0.25);
+}
+
+.btn-guardar-evaluaciones:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35), 0 10px 18px rgba(37, 99, 235, 0.25);
+}
+
+.btn-guardar-evaluaciones:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .modal {
   position: fixed;
   top: 0;
@@ -733,9 +855,8 @@ table tbody tr:last-child td {
 
 @media (max-width: 768px) {
   .header-guardia {
-    flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.65rem;
   }
   
   .filtros {

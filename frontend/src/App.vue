@@ -36,7 +36,10 @@
       </div>
     </header>
 
-    <div :class="['container', { 'container-wide': esRutaAulaConvivencia }]">
+    <div :class="['container', {
+      'container-wide-aula': esRutaAulaConvivencia,
+      'container-wide-expulsiones': esRutaExpulsiones
+    }]">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <keep-alive include="ValidarSanciones">
@@ -73,6 +76,9 @@ export default {
     },
     esRutaAulaConvivencia() {
       return this.$route.path === '/aula-convivencia'
+    },
+    esRutaExpulsiones() {
+      return this.$route.path === '/expulsiones'
     }
   },
   mounted() {
@@ -211,7 +217,43 @@ export default {
 .btn-logout-jandula { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer; color: white; }
 .logout-icon-svg { width: 22px; height: 22px; }
 .nav-links { background: #0b4e6b; display: flex; padding: 0 2rem; }
-.nav-button { padding: 1rem 1.5rem; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.95rem; }
+.nav-button {
+  padding: 1rem 1.5rem;
+  color: rgba(255,255,255,0.82);
+  text-decoration: none;
+  font-size: 0.95rem;
+  position: relative;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+
+.nav-button::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 8px;
+  height: 2px;
+  background: #ffffff;
+  border-radius: 999px;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+.nav-button:hover {
+  background: rgba(255,255,255,0.14);
+  color: #ffffff;
+}
+
+.nav-button:hover::after,
+.nav-button:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.nav-button:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.45);
+}
 .nav-with-indicator { display: inline-flex; align-items: center; gap: 0.45rem; }
 .pending-dot {
   width: 10px;
@@ -254,8 +296,10 @@ export default {
   }
 }
 .nav-button.router-link-active { background: white !important; color: #1a3a5a !important; font-weight: bold; }
+.nav-button.router-link-active::after { transform: scaleX(0); }
 .container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
-.container.container-wide { max-width: 1520px; padding: 0 1rem; }
+.container.container-wide-aula { max-width: 1320px; padding: 0 1rem; }
+.container.container-wide-expulsiones { max-width: 1240px; padding: 0 1rem; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; background: #f0f2f5; }
 </style>

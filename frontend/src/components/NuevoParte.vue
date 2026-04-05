@@ -304,6 +304,16 @@ export default {
   border: 1px solid transparent;
 }
 
+.creation-toast.ok {
+  background: linear-gradient(135deg, #0c9b58 0%, #0d7a4a 100%);
+  color: #ffffff;
+}
+
+.creation-toast.err {
+  background: linear-gradient(135deg, #d43d2f 0%, #b42318 100%);
+  color: #ffffff;
+}
+
 .toast-fade-enter-active,
 .toast-fade-leave-active {
   transition: opacity 0.25s ease, transform 0.25s ease;
