@@ -25,6 +25,7 @@
             <th>Alumno</th>
             <th>Curso</th>
             <th>Grupo</th>
+            <th>Tareas</th>
             <th>Estado</th>
             <th>Acción</th>
           </tr>
@@ -34,6 +35,7 @@
             <td>{{ exp.alumnoNombreCompleto || '-' }}</td>
             <td>{{ exp.curso || '-' }}</td>
             <td>{{ exp.grupo || '-' }}</td>
+            <td>{{ formatearProgresoTareas(exp) }}</td>
             <td>
               <span :class="['pill', exp.puedeGenerarPdf ? 'pill-ok' : 'pill-pending']">
                 {{ exp.puedeGenerarPdf ? 'Lista para PDF' : 'Pendiente tareas' }}
@@ -400,7 +402,9 @@ export default {
           alumnoNombreCompleto,
           curso: cursoAlumno,
           grupo: grupoAlumno,
-          puedeGenerarPdf: false
+          puedeGenerarPdf: false,
+          tareasCompletadas: 0,
+          tareasTotales: Number(data?.tareasPendientesGeneradas || 0)
         }
 
         this.expulsionesPdf = [
@@ -471,6 +475,11 @@ export default {
     formatearFecha(fecha) {
       if (!fecha) return ''
       return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')
+    },
+    formatearProgresoTareas(expulsion) {
+      const completadas = Number(expulsion?.tareasCompletadas || 0)
+      const totales = Number(expulsion?.tareasTotales || 0)
+      return `${completadas}/${totales}`
     }
   }
 }

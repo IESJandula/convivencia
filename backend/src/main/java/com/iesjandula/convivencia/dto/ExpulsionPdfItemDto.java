@@ -14,4 +14,6 @@ public class ExpulsionPdfItemDto {
     private String curso;
     private String grupo;
     private boolean puedeGenerarPdf;
+    private Integer tareasCompletadas;
+    private Integer tareasTotales;
 }

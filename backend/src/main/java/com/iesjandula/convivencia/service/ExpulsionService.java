@@ -76,13 +76,22 @@ public class ExpulsionService {
                         grupo = Objects.requireNonNullElse(alumno.getGrupo(), "");
                     }
 
+                        List<TareaExpulsion> tareasExpulsion = tareaExpulsionRepository.findByExpulsionId(expulsion.getId());
+                        int tareasTotales = tareasExpulsion.size();
+                        int tareasCompletadas = (int) tareasExpulsion.stream()
+                            .filter(tarea -> tarea.getEstado() == TareaExpulsion.Estado.COMPLETADA)
+                            .filter(tarea -> esActividadProfesorValida(tarea.getDescripcionTarea()))
+                            .count();
+
                     return new ExpulsionPdfItemDto(
                             expulsion.getId(),
                             alumno != null ? alumno.getId() : null,
                             nombreCompleto,
                             curso,
                             grupo,
-                            puedeGenerarCartaExpulsion(expulsion.getId())
+                            puedeGenerarCartaExpulsion(expulsion.getId()),
+                            tareasCompletadas,
+                            tareasTotales
                     );
                 })
                 .collect(Collectors.toList());
