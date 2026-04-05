@@ -7,8 +7,9 @@
     </transition>
 
     <div class="section-header">
-      <h2>Registro de Incidencia</h2>
-      <p>Complete el formulario para notificar una conducta contraria a las normas</p>
+      <span class="section-kicker">Convivencia</span>
+      <h2>Registro de incidencia disciplinaria</h2>
+      <p>Complete el formulario con la información del parte y, si procede, la derivación al Aula de Convivencia.</p>
     </div>
 
     <div class="card-jandula">
@@ -16,7 +17,8 @@
         {{ mensaje }}
       </div>
 
-      <form @submit.prevent="crearParte">
+      <form class="parte-form" @submit.prevent="crearParte">
+        <div class="block-title">Datos de identificación</div>
         <div class="form-grid">
           <div class="field-group">
             <label>Profesor (Email):</label>
@@ -39,6 +41,7 @@
           </div>
         </div>
 
+        <div class="block-title">Alumno y conducta</div>
         <div class="form-grid">
           <div class="field-group">
             <label>Seleccionar Curso:</label>
@@ -95,6 +98,7 @@
           ></textarea>
         </div>
 
+        <div class="block-title">Medida aplicada</div>
         <div class="field-group">
           <label>¿Se deriva al Aula de Convivencia?</label>
           <div class="toggle-jandula-wrapper">
@@ -134,7 +138,7 @@
         <div class="form-footer">
           <button type="button" class="btn-j-secondary" @click="limpiarFormulario">CANCELAR</button>
           <button type="submit" class="btn-j-primary" :disabled="guardando">
-            {{ guardando ? 'GUARDANDO...' : 'REGISTRAR PARTE' }}
+            {{ guardando ? 'GUARDANDO...' : 'CREAR PARTE' }}
           </button>
         </div>
       </form>
@@ -271,11 +275,20 @@ export default {
 </script>
 
 <style scoped>
-/* Contenedor principal para que el fondo gris se vea */
 .jandula-page-wrapper {
-  background-color: #f4f7f6;
+  --j-primary: #0f4c5c;
+  --j-primary-soft: #e6f1f4;
+  --j-accent: #1f7a8c;
+  --j-ink: #1f2937;
+  --j-muted: #64748b;
+  --j-border: #d8e1e8;
+
+  /* Contenedor principal para que el fondo gris se vea */
+  background:
+    radial-gradient(circle at 0% 0%, rgba(15, 76, 92, 0.1), transparent 34%),
+    linear-gradient(180deg, #f5f8fb 0%, #eff3f7 100%);
   min-height: 100vh;
-  padding: 40px 20px;
+  padding: 32px 20px 46px;
 }
 
 .creation-toast {
@@ -304,138 +317,243 @@ export default {
 
 .section-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 22px;
+}
+
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--j-primary);
+  background: var(--j-primary-soft);
+  border: 1px solid rgba(15, 76, 92, 0.18);
 }
 
 .section-header h2 {
-  color: #1a3a5a;
-  font-size: 24px;
-  font-weight: 600;
+  color: var(--j-ink);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin-top: 10px;
+}
+
+.section-header p {
+  color: var(--j-muted);
+  max-width: 760px;
+  margin: 10px auto 0;
+  line-height: 1.5;
 }
 
 /* Card Blanca con Borde Azul */
 .card-jandula {
   background: white;
-  max-width: 800px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 40px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  border-top: 4px solid #1a3a5a;
+  padding: 30px;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid #dce5ee;
+  border-top: 5px solid var(--j-primary);
+}
+
+.parte-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.block-title {
+  margin: 10px 0 8px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--j-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 14px;
 }
 
 .field-group {
-  margin-bottom: 25px;
+  margin-bottom: 16px;
 }
 
 .field-group label {
   display: block;
   font-weight: 700;
-  color: #33475b;
-  margin-bottom: 8px;
-  font-size: 14px;
+  color: #334155;
+  margin-bottom: 7px;
+  font-size: 0.85rem;
 }
 
 .jandula-input {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
+  padding: 11px 12px;
+  border: 1px solid var(--j-border);
+  border-radius: 8px;
   background-color: #fff;
-  color: #33475b;
+  color: #1f2937;
   box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.jandula-input:focus {
+  outline: none;
+  border-color: rgba(31, 122, 140, 0.7);
+  box-shadow: 0 0 0 3px rgba(31, 122, 140, 0.16);
 }
 
 /* Toggle Buttons SÍ/NO */
 .toggle-jandula-wrapper {
   display: flex;
-  background: #f1f5f9;
-  padding: 5px;
-  border-radius: 6px;
-  gap: 5px;
+  background: #edf2f7;
+  padding: 4px;
+  border-radius: 9px;
+  gap: 4px;
+  border: 1px solid #d7e1ea;
 }
 
 .toggle-jandula-wrapper button {
   flex: 1;
-  padding: 12px;
+  padding: 9px;
   border: none;
   background: transparent;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 700;
   color: #64748b;
-  border-radius: 4px;
+  border-radius: 7px;
   transition: 0.2s;
 }
 
 .toggle-jandula-wrapper button.active {
   background: white;
-  color: #1a3a5a;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  color: var(--j-primary);
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.14);
 }
 
 .aula-detail-box {
-  background: #f8fafc;
-  padding: 20px;
-  border-radius: 8px;
-  border-left: 4px solid #336699;
-  margin-bottom: 25px;
+  background: linear-gradient(180deg, #f7fbfc 0%, #f4f8fa 100%);
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #d3e2e8;
+  border-left: 4px solid var(--j-accent);
+  margin-bottom: 18px;
 }
 
 .form-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 15px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
+  gap: 12px;
+  padding: 12px 0 4px;
+  border-top: 1px solid #e6edf3;
 }
 
 .btn-j-primary {
-  background: #1a3a5a;
+  background-color: #0f4c5c;
+  background: linear-gradient(135deg, var(--j-primary) 0%, var(--j-accent) 100%);
   color: white;
-  padding: 14px 30px;
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
+  padding: 12px 24px;
+  border: 1px solid #0f4c5c;
+  border-radius: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 170px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-j-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 76, 92, 0.3);
 }
 
 .btn-j-secondary {
-  background: #e2e8f0;
+  background: #eef2f6;
   color: #475569;
-  padding: 14px 30px;
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
+  padding: 12px 24px;
+  border: 1px solid #d5dee8;
+  border-radius: 9px;
+  font-weight: 700;
   cursor: pointer;
+  transition: background 0.2s ease;
+  min-width: 130px;
+}
+
+.btn-j-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-j-secondary:hover {
+  background: #e4ebf3;
 }
 
 .btn-upload {
   display: inline-block;
-  padding: 10px 20px;
-  border: 2px dashed #cbd5e1;
-  color: #64748b;
-  border-radius: 6px;
+  padding: 10px 18px;
+  border: 2px dashed #c6d4df;
+  color: #4b6074;
+  border-radius: 8px;
   cursor: pointer;
+  background: #f7fafc;
 }
 
 .alert-jandula {
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 25px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
   text-align: center;
+  font-weight: 700;
 }
 .ok { background: #d1fae5; color: #065f46; }
 .err { background: #fee2e2; color: #991b1b; }
 
-.img-preview-min { height: 60px; border-radius: 4px; margin-right: 10px; }
+.img-preview-min { height: 66px; border-radius: 6px; margin-right: 10px; border: 1px solid #d9e2ea; }
+
+.preview-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-clean {
+  border: 1px solid #f2b8b5;
+  background: #fff5f5;
+  color: #b42318;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
 
 @media (max-width: 600px) {
-  .form-grid { grid-template-columns: 1fr; }
+  .jandula-page-wrapper {
+    padding: 20px 12px 28px;
+  }
+  .card-jandula {
+    padding: 18px;
+    border-radius: 10px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
 }
 </style>
