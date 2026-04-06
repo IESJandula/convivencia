@@ -1,12 +1,57 @@
 <template>
-  <div class="card">
+  <div class="jefatura-page">
     <transition name="toast-fade">
       <div v-if="toastVisible" :class="['creation-toast', toastTipo === 'success' ? 'ok' : 'err']">
         {{ toastMensaje }}
       </div>
     </transition>
 
-    <h2>⚖️ Monitorización Jefatura</h2>
+    <div class="section-header">
+      <span class="section-kicker">Jefatura</span>
+      <h2>{{ esVistaExpulsiones ? 'Cartas de Expulsión y PDFs' : 'Validación de Sanciones' }}</h2>
+      <p>
+        {{ esVistaExpulsiones
+          ? 'Controla el estado de las expulsiones y genera cartas PDF cuando proceda.'
+          : 'Filtra partes activos y tramita expulsiones de forma segura y ordenada.' }}
+      </p>
+    </div>
+
+    <div class="card-jandula">
+      <div class="resumen-grid" v-if="esVistaExpulsiones">
+        <article class="metric-card principal">
+          <span class="metric-label">Expulsiones</span>
+          <strong class="metric-value">{{ expulsionesPdf.length }}</strong>
+          <small>Total en listado</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Listas para PDF</span>
+          <strong class="metric-value">{{ expulsionesListasPdf }}</strong>
+          <small>Con tareas completadas</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Pendientes</span>
+          <strong class="metric-value">{{ expulsionesPendientesPdf }}</strong>
+          <small>Faltan tareas por validar</small>
+        </article>
+      </div>
+
+      <div class="resumen-grid" v-else>
+        <article class="metric-card principal">
+          <span class="metric-label">Partes activos</span>
+          <strong class="metric-value">{{ partesActivos.length }}</strong>
+          <small>Seleccionables para expulsión</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Seleccionados</span>
+          <strong class="metric-value">{{ selectedPartes.length }}</strong>
+          <small>Marcados en tabla</small>
+        </article>
+        <article class="metric-card">
+          <span class="metric-label">Alumno único</span>
+          <strong class="metric-value">{{ alumnosSeleccionados }}</strong>
+          <small>Debe ser 1 para crear expulsión</small>
+        </article>
+      </div>
 
     <div v-if="mensaje" :class="['alert', mensajeTipo === 'success' ? 'alert-success' : 'alert-error']">
       {{ mensaje }}
@@ -19,7 +64,8 @@
       </div>
       <p v-if="cargandoExpulsionesPdf && !expulsionesPdf.length" class="sin-datos">Cargando expulsiones...</p>
       <p v-else-if="!expulsionesPdf.length" class="sin-datos">No hay expulsiones registradas todavía.</p>
-      <table v-else>
+      <div class="table-shell" v-else>
+      <table>
         <thead>
           <tr>
             <th>Alumno</th>
@@ -53,9 +99,11 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <template v-else>
+    <div class="filtros-panel">
     <div class="filtros">
       <input v-model="filtros.nombreAlumno" type="text" placeholder="Buscar alumno por nombre" @keyup.enter="cargarPartes" />
       <select v-model="filtros.curso" @change="cargarPartes">
@@ -67,6 +115,7 @@
         <option v-for="g in grupos" :key="g" :value="g">{{ g }}</option>
       </select>
       <button class="btn btn-primary" @click="cargarPartes">Buscar</button>
+    </div>
     </div>
 
     <div class="expulsion-panel" v-if="partesActivos.length">
@@ -81,7 +130,8 @@
       </div>
     </div>
 
-    <table v-if="partesActivos.length">
+    <div class="table-shell" v-if="partesActivos.length">
+    <table>
       <thead>
         <tr>
           <th>Sel.</th>
@@ -113,9 +163,11 @@
         </tr>
       </tbody>
     </table>
+    </div>
 
     <p v-else class="sin-datos">No hay partes en estado ACTIVO con esos filtros.</p>
     </template>
+    </div>
   </div>
 </template>
 
@@ -158,6 +210,21 @@ export default {
     },
     partesActivos() {
       return (this.partes || []).filter(p => p.estadoComputo === 'ACTIVO')
+    },
+    expulsionesListasPdf() {
+      return (this.expulsionesPdf || []).filter(exp => exp?.puedeGenerarPdf).length
+    },
+    expulsionesPendientesPdf() {
+      return (this.expulsionesPdf || []).filter(exp => !exp?.puedeGenerarPdf).length
+    },
+    alumnosSeleccionados() {
+      const ids = new Set(
+        this.partesActivos
+          .filter(parte => this.selectedPartes.includes(parte.id))
+          .map(parte => parte?.alumno?.id)
+          .filter(Boolean)
+      )
+      return ids.size
     }
   },
   watch: {
@@ -486,6 +553,85 @@ export default {
 </script>
 
 <style scoped>
+.jefatura-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.section-header {
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, #0f3d63, #1f6a96);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(15, 61, 99, 0.25);
+}
+
+.section-kicker {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.section-header h2 {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.section-header p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: 0.95rem;
+}
+
+.card-jandula {
+  background: #fff;
+  border: 1px solid #d7e1ea;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(27, 44, 62, 0.08);
+  padding: 1rem;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.metric-card {
+  background: #f8fbfe;
+  border: 1px solid #d9e6f2;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.metric-card.principal {
+  background: #eaf4ff;
+  border-color: #b9d8f4;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #425b73;
+  font-weight: 700;
+}
+
+.metric-value {
+  color: #123a5a;
+  font-size: 1.2rem;
+}
+
+.metric-card small {
+  color: #5d7184;
+}
+
 .creation-toast {
   position: fixed;
   top: 30px;
@@ -522,19 +668,201 @@ export default {
   transform: translate(-50%, -8px);
 }
 
-.filtros { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.75rem; margin: 1rem 0 1.5rem; }
-input, select { padding: 0.6rem; border: 1px solid #d1d5db; border-radius: 6px; }
-.expulsion-panel { margin: 1rem 0; padding: 1rem; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; }
-.expulsion-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.75rem; margin-top: 0.75rem; }
-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
-.sin-datos { color: #666; margin-top: 1rem; }
-.alert { margin: 1rem 0; padding: 0.75rem 1rem; border-radius: 6px; }
+.filtros-panel {
+  background: #f7fafc;
+  border: 1px solid #dbe6ef;
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 0.75rem;
+}
+
+input,
+select {
+  padding: 0.62rem;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.expulsion-panel {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px solid #dbe6ef;
+  border-radius: 10px;
+}
+
+.expulsion-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.table-shell {
+  border: 1px solid #d3e0eb;
+  border-radius: 12px;
+  background: #f3f7fb;
+  padding: 0.4rem;
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th,
+td {
+  padding: 0.8rem 0.75rem;
+  border-bottom: 1px solid #dde7ef;
+  border-right: 1px solid #e8eff5;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th:last-child,
+td:last-child {
+  border-right: none;
+}
+
+th {
+  background: linear-gradient(180deg, #f6f9fc 0%, #edf3f8 100%);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #3f556b;
+  border-bottom: 2px solid #c9d9e8;
+}
+
+tbody tr:nth-child(odd) td {
+  background: #ffffff;
+}
+
+tbody tr:nth-child(even) td {
+  background: #f8fbff;
+}
+
+tbody tr:hover td {
+  background: #eaf4ff;
+}
+
+tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 #2f6d96;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.sin-datos {
+  color: #5f7285;
+  margin-top: 1rem;
+}
+
+.alert {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+}
 .alert-success { background: #dcfce7; color: #166534; }
 .alert-error { background: #fee2e2; color: #991b1b; }
+
+.btn {
+  padding: 0.62rem 1rem;
+  border-radius: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0f4c5c 0%, #16718a 100%);
+  border-color: #0f4c5c;
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 76, 92, 0.3);
+}
+
 .pdf-actions { margin: 0.5rem 0 1rem; }
-.pdf-actions-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
-.pill { padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.8rem; }
+
+.pdf-actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.pdf-actions-header h3 {
+  margin: 0;
+  color: #1f3f5a;
+}
+
+.pill {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
 .pill-pending { background: #fef3c7; color: #92400e; }
 .pill-ok { background: #dcfce7; color: #166534; }
+
+@media (max-width: 980px) {
+  .resumen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filtros button {
+    grid-column: 1 / -1;
+  }
+
+  .table-shell {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 900px;
+  }
+}
+
+@media (max-width: 640px) {
+  .filtros {
+    grid-template-columns: 1fr;
+  }
+
+  .expulsion-form {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

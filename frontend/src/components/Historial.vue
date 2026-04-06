@@ -37,9 +37,6 @@
             <label>Fecha hasta</label>
             <input type="date" v-model="filtroFechaHasta" @change="cargarPartes" />
           </div>
-          <button @click="limpiarFiltros" class="btn btn-secondary btn-filtro">
-            Limpiar filtros
-          </button>
         </div>
       </div>
 
@@ -551,35 +548,66 @@ export default {
 }
 
 .table-shell {
-  border: 1px solid #e1eaf1;
-  border-radius: 10px;
+  border: 1px solid #d3e0eb;
+  border-radius: 12px;
+  background: #f3f7fb;
+  padding: 0.4rem;
   overflow: hidden;
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 th,
 td {
-  padding: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 0.8rem 0.75rem;
+  border-bottom: 1px solid #dde7ef;
+  border-right: 1px solid #e8eff5;
   text-align: left;
   vertical-align: middle;
 }
 
+th:last-child,
+td:last-child {
+  border-right: none;
+}
+
 th {
-  background: #f5f8fb;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, #f6f9fc 0%, #edf3f8 100%);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #4c6278;
+  color: #3f556b;
+  border-bottom: 2px solid #c9d9e8;
 }
 
-tbody tr:hover {
+tbody tr:nth-child(odd) td {
+  background: #ffffff;
+}
+
+tbody tr:nth-child(even) td {
   background: #f8fbff;
+}
+
+tbody tr:hover td {
+  background: #eaf4ff;
+}
+
+tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 #2f6d96;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .alumno-col {
