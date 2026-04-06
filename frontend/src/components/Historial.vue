@@ -1,67 +1,102 @@
 <template>
-  <div class="card">
-    <h2>📋 Historial de Partes</h2>
-
-    <div class="filtros">
-      <div class="form-group">
-        <label>Fecha desde</label>
-        <input type="date" v-model="filtroFechaDesde" @change="cargarPartes" />
-      </div>
-      <div class="form-group">
-        <label>Fecha hasta</label>
-        <input type="date" v-model="filtroFechaHasta" @change="cargarPartes" />
-      </div>
-      <button @click="limpiarFiltros" class="btn btn-secondary">
-        🔄 Limpiar filtros
-      </button>
+  <div class="historial-page">
+    <div class="section-header">
+      <span class="section-kicker">Convivencia</span>
+      <h2>Historial de Partes</h2>
+      <p>Consulta y seguimiento de partes disciplinarios con filtros por fecha y detalle completo.</p>
     </div>
 
-    <div v-if="partes.length === 0" class="sin-datos">
-      <p>📭 No hay partes registrados</p>
-    </div>
+    <div class="card-jandula">
+      <div class="resumen-grid">
+        <article class="metric-card principal">
+          <span class="metric-label">Total registros</span>
+          <strong class="metric-value">{{ partes.length }}</strong>
+          <small>Partes en la vista actual</small>
+        </article>
 
-    <table v-else>
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Profesor</th>
-          <th>Alumno</th>
-          <th>Curso</th>
-          <th>Gravedad</th>
-          <th>Medida</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="parte in partes" :key="parte.id">
-          <td>{{ formatearFecha(parte.fecha) }}</td>
-          <td>{{ parte.profesor.nombre }}</td>
-          <td>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</td>
-          <td>{{ parte.curso }}</td>
-          <td>
-            <span :class="['badge', parte.gravedad === 'GRAVE' ? 'badge-danger' : 'badge-warning']">
-              {{ parte.gravedad || 'LEVE' }}
-            </span>
-          </td>
-          <td>
-            <span :class="['badge', parte.medidaTomada === 'AULA_CONVIVENCIA' ? 'badge-warning' : 'badge-info']">
-              {{ parte.medidaTomada === 'AULA_CONVIVENCIA' ? 'Aula' : 'Clase' }}
-            </span>
-          </td>
-          <td>
-            <span :class="['badge', estaComputado(parte) ? 'badge-info' : 'badge-pending']">
-              {{ estaComputado(parte) ? 'EXPULSADO' : 'PENDIENTE' }}
-            </span>
-          </td>
-          <td>
-            <button @click="verDetalle(parte)" class="btn-small btn-primary">
-              👁️ Ver
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        <article class="metric-card">
+          <span class="metric-label">Pendientes</span>
+          <strong class="metric-value">{{ totalPendientes }}</strong>
+          <small>Sin cómputo de expulsión</small>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Computados</span>
+          <strong class="metric-value">{{ totalComputados }}</strong>
+          <small>Expulsados o computados</small>
+        </article>
+      </div>
+
+      <div class="filtros-panel">
+        <div class="filtros">
+          <div class="form-group">
+            <label>Fecha desde</label>
+            <input type="date" v-model="filtroFechaDesde" @change="cargarPartes" />
+          </div>
+          <div class="form-group">
+            <label>Fecha hasta</label>
+            <input type="date" v-model="filtroFechaHasta" @change="cargarPartes" />
+          </div>
+          <button @click="limpiarFiltros" class="btn btn-secondary btn-filtro">
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+
+      <div v-if="partes.length === 0" class="sin-datos">
+        <h3>Sin resultados</h3>
+        <p>No hay partes registrados para los filtros seleccionados.</p>
+      </div>
+
+      <div class="table-shell" v-else>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Profesor</th>
+              <th>Alumno</th>
+              <th>Curso</th>
+              <th>Gravedad</th>
+              <th>Medida</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="parte in partes" :key="parte.id">
+              <td>{{ formatearFecha(parte.fecha) }}</td>
+              <td>{{ parte.profesor.nombre }}</td>
+              <td>
+                <div class="alumno-col">
+                  <strong>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</strong>
+                </div>
+              </td>
+              <td>{{ parte.curso }}</td>
+              <td>
+                <span :class="['gravedad-tag', parte.gravedad === 'GRAVE' ? 'grave' : 'leve']">
+                  {{ parte.gravedad || 'LEVE' }}
+                </span>
+              </td>
+              <td>
+                <span :class="['badge', parte.medidaTomada === 'AULA_CONVIVENCIA' ? 'badge-warning' : 'badge-info']">
+                  {{ parte.medidaTomada === 'AULA_CONVIVENCIA' ? 'Aula' : 'Clase' }}
+                </span>
+              </td>
+              <td>
+                <span :class="['badge', estaComputado(parte) ? 'badge-info' : 'badge-pending']">
+                  {{ estaComputado(parte) ? 'EXPULSADO' : 'PENDIENTE' }}
+                </span>
+              </td>
+              <td>
+                <button @click="verDetalle(parte)" class="btn-small btn-primary">
+                  Ver
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- Modal detalle -->
     <div v-if="parteSeleccionado" class="modal" @click="cerrarModal">
@@ -199,6 +234,12 @@ export default {
   computed: {
     esVistaProfesor() {
       return this.rolUsuario === 'PROFESOR' && Boolean(this.emailSesion)
+    },
+    totalComputados() {
+      return this.partes.filter(parte => this.estaComputado(parte)).length
+    },
+    totalPendientes() {
+      return this.partes.filter(parte => !this.estaComputado(parte)).length
     },
     tieneValoracionesConvivencia() {
       return Array.isArray(this.parteSeleccionado?.valoracionesConvivencia)
@@ -402,65 +443,184 @@ export default {
 </script>
 
 <style scoped>
-.filtros {
-  display: flex;
+
+.historial-page {
+  display: grid;
   gap: 1rem;
-  align-items: flex-end;
-  margin-bottom: 2rem;
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
+}
+
+.section-header {
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, #0f3d63, #1f6a96);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(15, 61, 99, 0.25);
+}
+
+.section-kicker {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.section-header h2 {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.section-header p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: 0.95rem;
+}
+
+.card-jandula {
+  background: #fff;
+  border: 1px solid #d7e1ea;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(27, 44, 62, 0.08);
+  padding: 1rem;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.metric-card {
+  background: #f8fbfe;
+  border: 1px solid #d9e6f2;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.metric-card.principal {
+  background: #eaf4ff;
+  border-color: #b9d8f4;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #425b73;
+  font-weight: 700;
+}
+
+.metric-value {
+  color: #123a5a;
+  font-size: 1.2rem;
+}
+
+.metric-card small {
+  color: #5d7184;
+}
+
+.filtros-panel {
+  background: #f7fafc;
+  border: 1px solid #dbe6ef;
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.filtros {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.8rem;
+  align-items: end;
 }
 
 .filtros .form-group {
-  flex: 1;
   margin-bottom: 0;
   border: 1px solid #d9dee8;
   border-radius: 8px;
-  padding: 0.75rem;
+  padding: 0.7rem;
   background: #fff;
+}
+
+.btn-filtro {
+  height: 40px;
+}
+
+.table-shell {
+  border: 1px solid #e1eaf1;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid #d9dee8;
-  border-radius: 10px;
-  overflow: hidden;
+  border-collapse: collapse;
   background: #fff;
 }
 
-thead th {
-  border-bottom: 1px solid #d9dee8;
-  border-right: 1px solid #e8ecf3;
-  padding: 0.8rem;
-  background: #f4f6fb;
+th,
+td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: middle;
 }
 
-thead th:last-child {
-  border-right: none;
+th {
+  background: #f5f8fb;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #4c6278;
 }
 
-tbody td {
-  border-bottom: 1px solid #e8ecf3;
-  border-right: 1px solid #eef1f6;
-  padding: 0.8rem;
+tbody tr:hover {
+  background: #f8fbff;
 }
 
-tbody td:last-child {
-  border-right: none;
+.alumno-col {
+  display: grid;
+  gap: 0.1rem;
 }
 
-tbody tr:last-child td {
-  border-bottom: none;
+.alumno-col small {
+  color: #6b7280;
+}
+
+.gravedad-tag {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.gravedad-tag.leve {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.gravedad-tag.grave {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .sin-datos {
   text-align: center;
-  padding: 3rem;
-  color: #666;
-  font-size: 1.1rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1.2rem;
+  color: #5f7285;
+  background: #f8fafc;
+}
+
+.sin-datos h3 {
+  margin: 0 0 0.35rem;
+  color: #2d4b66;
 }
 
 .badge {
@@ -505,12 +665,12 @@ tbody tr:last-child td {
 }
 
 .btn-primary {
-  background: #667eea;
+  background: #1d5f86;
   color: white;
 }
 
 .btn-primary:hover {
-  background: #5568d3;
+  background: #164967;
 }
 
 .modal {
@@ -557,7 +717,7 @@ tbody tr:last-child td {
 .detalle-item strong {
   display: block;
   margin-bottom: 0.5rem;
-  color: #667eea;
+  color: #1b4f77;
 }
 
 .detalle-item p {
@@ -566,7 +726,7 @@ tbody tr:last-child td {
 }
 
 .archivo-section {
-  border: 2px solid #667eea;
+  border: 2px solid #1d5f86;
 }
 
 .valoracion-section {
@@ -658,7 +818,7 @@ tbody tr:last-child td {
 .link-documento {
   display: inline-block;
   padding: 0.75rem 1.5rem;
-  background: #667eea;
+  background: #1d5f86;
   color: white;
   border: none;
   text-decoration: none;
@@ -669,7 +829,7 @@ tbody tr:last-child td {
 }
 
 .link-documento:hover {
-  background: #5568d3;
+  background: #164967;
   transform: translateY(-2px);
 }
 
@@ -682,6 +842,22 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 640px) {
+  .resumen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filtros {
+    grid-template-columns: 1fr;
+  }
+
+  .table-shell {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 840px;
+  }
+
   .valoracion-grid {
     grid-template-columns: 1fr;
   }

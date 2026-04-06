@@ -1,53 +1,95 @@
 <template>
-  <div class="card">
-    <h2>👥 Mi Tutoría</h2>
+  <div class="tutoria-page">
+    <div class="section-header">
+      <span class="section-kicker">Tutoría</span>
+      <h2>Seguimiento del Grupo Tutor</h2>
+      <p>Consulta rápida del estado disciplinario del alumnado asignado a tu tutoría.</p>
+    </div>
 
     <div v-if="mensaje" :class="['alert', mensajeTipo === 'success' ? 'alert-success' : 'alert-error']">
       {{ mensaje }}
     </div>
 
-    <div class="resumen" v-if="grupoTutoria">
-      <p><strong>Grupo tutoría:</strong> {{ grupoTutoria.curso }} {{ grupoTutoria.letra }}</p>
-      <p><strong>Total partes:</strong> {{ partes.length }}</p>
+    <div class="card-jandula" v-if="grupoTutoria">
+      <div class="resumen-grid">
+        <article class="metric-card principal">
+          <span class="metric-label">Grupo tutoría</span>
+          <strong class="metric-value">{{ grupoTutoria.curso }} {{ grupoTutoria.letra }}</strong>
+          <small>Asignación activa del curso</small>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Total de partes</span>
+          <strong class="metric-value">{{ partes.length }}</strong>
+          <small>Registro histórico del grupo</small>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Pendientes</span>
+          <strong class="metric-value">{{ totalPendientes }}</strong>
+          <small>Requieren seguimiento</small>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Computados / expulsión</span>
+          <strong class="metric-value">{{ totalComputados }}</strong>
+          <small>Ya tramitados</small>
+        </article>
+      </div>
+
+      <div class="table-shell" v-if="partes.length">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Alumno</th>
+              <th>Profesor</th>
+              <th>Gravedad</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="parte in partes" :key="parte.id">
+              <td>{{ formatearFecha(parte.fecha) }}</td>
+              <td>
+                <div class="alumno-col">
+                  <strong>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</strong>
+                </div>
+              </td>
+              <td>{{ parte.profesor.nombre }}</td>
+              <td>
+                <span :class="['gravedad-tag', parte.gravedad === 'GRAVE' ? 'grave' : 'leve']">
+                  {{ parte.gravedad }}
+                </span>
+              </td>
+              <td>
+                <span :class="['badge', estaComputado(parte) ? 'badge-info' : 'badge-pending']">
+                  {{ estaComputado(parte) ? 'EXPULSADO' : 'PENDIENTE' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-ver" @click="verParte(parte)">Ver parte</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-else class="empty-inline">
+        No hay partes registrados para tu tutoría.
+      </div>
     </div>
 
-    <div v-else class="sin-datos">
-      <p>No tienes un grupo de tutoría asignado.</p>
+    <div v-else class="empty-state">
+      <h3>Sin grupo de tutoría asignado</h3>
+      <p>No hay un grupo vinculado a tu usuario en este momento.</p>
     </div>
-
-    <table v-if="partes.length">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Alumno</th>
-          <th>Profesor</th>
-          <th>Gravedad</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="parte in partes" :key="parte.id">
-          <td>{{ formatearFecha(parte.fecha) }}</td>
-          <td>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</td>
-          <td>{{ parte.profesor.nombre }}</td>
-          <td>{{ parte.gravedad }}</td>
-          <td>
-            <span :class="['badge', estaComputado(parte) ? 'badge-info' : 'badge-pending']">
-              {{ estaComputado(parte) ? 'EXPULSADO' : 'PENDIENTE' }}
-            </span>
-          </td>
-          <td>
-            <button class="btn-ver" @click="verParte(parte)">Ver parte</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
 
     <div v-if="parteSeleccionado" class="modal-overlay" @click.self="cerrarDetalle">
       <div class="modal-detalle">
         <div class="modal-header">
-          <h3>Detalle del Parte</h3>
+          <h3>Detalle del parte disciplinario</h3>
           <button class="btn-cerrar" @click="cerrarDetalle">×</button>
         </div>
 
@@ -78,6 +120,14 @@ const API_URL = 'http://localhost:8080/api'
 
 export default {
   name: 'MisAlumnos',
+  computed: {
+    totalComputados() {
+      return this.partes.filter(parte => this.estaComputado(parte)).length
+    },
+    totalPendientes() {
+      return this.partes.filter(parte => !this.estaComputado(parte)).length
+    }
+  },
   data() {
     return {
       grupoTutoria: null,
@@ -136,13 +186,158 @@ export default {
 </script>
 
 <style scoped>
-.resumen { margin: 1rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px; }
-.sin-datos { margin: 1rem 0; color: #666; }
-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
-.alert { margin: 1rem 0; padding: 0.75rem 1rem; border-radius: 6px; }
-.alert-success { background: #dcfce7; color: #166534; }
-.alert-error { background: #fee2e2; color: #991b1b; }
+.tutoria-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.section-header {
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  background: linear-gradient(135deg, #0f3d63, #1f6a96);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(15, 61, 99, 0.25);
+}
+
+.section-kicker {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.section-header h2 {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.section-header p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: 0.95rem;
+}
+
+.card-jandula {
+  background: #fff;
+  border: 1px solid #d7e1ea;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(27, 44, 62, 0.08);
+  padding: 1rem;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.metric-card {
+  background: #f8fbfe;
+  border: 1px solid #d9e6f2;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.metric-card.principal {
+  background: #eaf4ff;
+  border-color: #b9d8f4;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #425b73;
+  font-weight: 700;
+}
+
+.metric-value {
+  color: #123a5a;
+  font-size: 1.2rem;
+}
+
+.metric-card small {
+  color: #5d7184;
+}
+
+.table-shell {
+  border: 1px solid #e1eaf1;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  background: #f5f8fb;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #4c6278;
+}
+
+tbody tr:hover {
+  background: #f8fbff;
+}
+
+.alumno-col {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.alumno-col small {
+  color: #6b7280;
+}
+
+.gravedad-tag {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.gravedad-tag.leve {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.gravedad-tag.grave {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+}
+
+.alert-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .badge {
   display: inline-block;
   padding: 0.25rem 0.55rem;
@@ -160,7 +355,7 @@ th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
 }
 .btn-ver {
   border: 1px solid #0b4e6b;
-  background: white;
+  background: #fff;
   color: #0b4e6b;
   border-radius: 6px;
   padding: 0.35rem 0.6rem;
@@ -168,6 +363,26 @@ th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
   font-weight: 600;
 }
 .btn-ver:hover { background: #e6f2f7; }
+
+.empty-inline {
+  text-align: center;
+  color: #546678;
+  padding: 1.1rem 0.8rem;
+}
+
+.empty-state {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: center;
+  color: #5f7285;
+  background: #f8fafc;
+}
+
+.empty-state h3 {
+  margin: 0 0 0.35rem;
+  color: #2d4b66;
+}
 
 .modal-overlay {
   position: fixed;
@@ -221,5 +436,25 @@ th, td { padding: 0.75rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
 .descripcion {
   border-top: 1px solid #e5e7eb;
   padding-top: 0.7rem;
+}
+
+@media (max-width: 980px) {
+  .resumen-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-shell {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 640px) {
+  .resumen-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
