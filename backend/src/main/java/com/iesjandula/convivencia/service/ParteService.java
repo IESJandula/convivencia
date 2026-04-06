@@ -88,11 +88,9 @@ public class ParteService {
     }
 
     public List<ParteAulaConvivenciaDto> listarPartesAulaConvivencia(LocalDate fecha) {
-        List<ParteDisciplinario> partes = parteRepository.findByFechaAndMedidaAndEstados(
-                fecha,
-                ParteDisciplinario.MedidaTomada.AULA_CONVIVENCIA,
-                List.of(ParteDisciplinario.Estado.PENDIENTE, ParteDisciplinario.Estado.EVALUADO),
-                ParteDisciplinario.EstadoComputo.ACTIVO
+        List<ParteDisciplinario> partes = parteRepository.findByMedidaAndEstadoComputo(
+            ParteDisciplinario.MedidaTomada.AULA_CONVIVENCIA,
+            ParteDisciplinario.EstadoComputo.ACTIVO
         );
 
         return partes.stream().map(parte -> {

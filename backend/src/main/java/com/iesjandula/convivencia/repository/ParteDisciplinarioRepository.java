@@ -42,6 +42,19 @@ public interface ParteDisciplinarioRepository extends JpaRepository<ParteDiscipl
             @Param("estadoComputo") EstadoComputo estadoComputo
     );
 
+        @Query("SELECT p FROM ParteDisciplinario p WHERE p.medidaTomada = :medida AND p.estado = :estado AND p.estadoComputo = :estadoComputo AND p.activo = true ORDER BY p.fecha DESC, p.id DESC")
+        List<ParteDisciplinario> findByMedidaAndEstadoAndEstadoComputo(
+            @Param("medida") MedidaTomada medida,
+            @Param("estado") Estado estado,
+            @Param("estadoComputo") EstadoComputo estadoComputo
+        );
+
+            @Query("SELECT p FROM ParteDisciplinario p WHERE p.medidaTomada = :medida AND p.estadoComputo = :estadoComputo AND p.activo = true ORDER BY p.fecha DESC, p.id DESC")
+            List<ParteDisciplinario> findByMedidaAndEstadoComputo(
+                @Param("medida") MedidaTomada medida,
+                @Param("estadoComputo") EstadoComputo estadoComputo
+            );
+
         @Query("SELECT p FROM ParteDisciplinario p WHERE p.fecha = :fecha AND p.medidaTomada = :medida AND p.estado IN :estados AND p.estadoComputo = :estadoComputo AND p.activo = true")
         List<ParteDisciplinario> findByFechaAndMedidaAndEstados(
             @Param("fecha") LocalDate fecha,
