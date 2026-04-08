@@ -367,11 +367,7 @@ export default {
           this.mensaje = ''
           this.mensajeTipo = ''
           this.mostrarToast('Guardado con exito', 'success')
-          
-          setTimeout(() => {
-            this.mensaje = ''
-            this.cargarPartes()
-          }, 3000)
+          this.cargarPartes()
         } else {
           this.mensaje = `⚠️ Se guardaron ${guardados} evaluación(es), pero ${errores} tuvieron errores${ultimoError ? `: ${ultimoError}` : ''}`
           this.mensajeTipo = 'error'

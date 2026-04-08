@@ -39,6 +39,10 @@ public class SesionConvivenciaService {
         ParteDisciplinario parte = parteRepository.findById(dto.getParteId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Parte no encontrado"));
 
+        if (parte.getEstado() == ParteDisciplinario.Estado.EVALUADO || sesionRepository.existsByParteId(parte.getId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este parte ya ha sido evaluado en aula de convivencia");
+        }
+
         String emailGuardia = dto.getProfesorGuardiaEmail().trim();
         Profesor profesorGuardia = profesorRepository.findByEmailAndActivoTrue(emailGuardia)
             .orElseGet(() -> profesorRepository.findByEmailNormalized(emailGuardia)
@@ -51,9 +55,7 @@ public class SesionConvivenciaService {
         LocalDate fechaSesion = dto.getFecha() != null ? dto.getFecha() : LocalDate.now();
         String tramo = normalizarTramo(dto.getTramoHorario());
 
-        SesionConvivencia sesion = sesionRepository
-            .findByParteIdAndFechaAndTramoHorario(dto.getParteId(), fechaSesion, tramo)
-            .orElseGet(SesionConvivencia::new);
+        SesionConvivencia sesion = new SesionConvivencia();
 
         sesion.setParte(parte);
         sesion.setProfesorGuardia(profesorGuardia);

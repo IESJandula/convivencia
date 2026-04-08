@@ -13,4 +13,5 @@ public interface SesionConvivenciaRepository extends JpaRepository<SesionConvive
     Optional<SesionConvivencia> findByParteIdAndFechaAndTramoHorario(Integer parteId, LocalDate fecha, String tramoHorario);
     List<SesionConvivencia> findByFechaAndTramoHorario(LocalDate fecha, String tramoHorario);
     List<SesionConvivencia> findByProfesorGuardiaEmail(String profesorEmail);
+    boolean existsByParteId(Integer parteId);
 }

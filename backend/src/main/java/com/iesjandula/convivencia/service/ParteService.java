@@ -88,8 +88,9 @@ public class ParteService {
     }
 
     public List<ParteAulaConvivenciaDto> listarPartesAulaConvivencia(LocalDate fecha) {
-        List<ParteDisciplinario> partes = parteRepository.findByMedidaAndEstadoComputo(
+        List<ParteDisciplinario> partes = parteRepository.findPendientesSinSesionAula(
             ParteDisciplinario.MedidaTomada.AULA_CONVIVENCIA,
+            ParteDisciplinario.Estado.PENDIENTE,
             ParteDisciplinario.EstadoComputo.ACTIVO
         );
 

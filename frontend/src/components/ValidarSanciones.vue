@@ -429,8 +429,8 @@ export default {
 
       const alumnoIds = [...new Set(seleccionados.map(p => p.alumno.id))]
       if (alumnoIds.length !== 1) {
-        this.mensaje = 'Solo puedes crear una expulsión para un alumno cada vez.'
-        this.mensajeTipo = 'error'
+        this.mensaje = ''
+        this.mostrarToast('Solo puedes crear una expulsión para un alumno cada vez', 'error')
         return
       }
 
