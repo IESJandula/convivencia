@@ -25,6 +25,15 @@ public class TareaExpulsionController {
         return ResponseEntity.ok(tareaExpulsionService.listarPorProfesor(email));
     }
 
+    @GetMapping("/expulsion/{expulsionId}")
+    public ResponseEntity<?> listarPorExpulsion(@PathVariable Integer expulsionId) {
+        try {
+            return ResponseEntity.ok(tareaExpulsionService.listarPorExpulsion(expulsionId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PatchMapping("/{tareaId}/completar")
     public ResponseEntity<?> marcarCompletada(@PathVariable Integer tareaId,
                                               @RequestParam String profesorEmail) {

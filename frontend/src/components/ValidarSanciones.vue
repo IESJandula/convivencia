@@ -78,7 +78,11 @@
         </thead>
         <tbody>
           <tr v-for="exp in expulsionesPdf" :key="exp.expulsionId">
-            <td>{{ exp.alumnoNombreCompleto || '-' }}</td>
+            <td>
+              <button class="alumno-link" @click="abrirDetalleExpulsion(exp)">
+                {{ exp.alumnoNombreCompleto || '-' }}
+              </button>
+            </td>
             <td>{{ exp.curso || '-' }}</td>
             <td>{{ exp.grupo || '-' }}</td>
             <td>{{ formatearProgresoTareas(exp) }}</td>
@@ -99,6 +103,37 @@
           </tr>
         </tbody>
       </table>
+      </div>
+
+      <div v-if="modalExpulsion" class="modal-overlay" @click="cerrarDetalleExpulsion">
+        <div class="modal-detalle" @click.stop>
+          <div class="modal-detalle-head">
+            <div>
+              <h3>{{ modalExpulsion.alumnoNombreCompleto || 'Alumno' }}</h3>
+              <p>
+                <strong>Curso:</strong> {{ modalExpulsion.curso || '-' }}
+                <strong style="margin-left: 1rem;">Grupo:</strong> {{ modalExpulsion.grupo || '-' }}
+              </p>
+            </div>
+            <button class="btn btn-primary" @click="cerrarDetalleExpulsion">Cerrar</button>
+          </div>
+
+          <p v-if="modalExpulsion.cargando" class="sin-datos">Cargando tareas...</p>
+          <p v-else-if="!modalExpulsion.tareas.length" class="sin-datos">No hay tareas asociadas a esta expulsión.</p>
+
+          <div v-else class="detalle-grid">
+            <article v-for="tarea in modalExpulsion.tareas" :key="tarea.id" class="detalle-card">
+              <div class="detalle-card-head">
+                <strong>{{ tarea.asignatura || 'Sin asignatura' }}</strong>
+                <span :class="['pill', tarea.estado === 'COMPLETADA' ? 'pill-ok' : 'pill-pending']">
+                  {{ tarea.estado === 'COMPLETADA' ? 'Completada' : 'Pendiente' }}
+                </span>
+              </div>
+              <p><strong>Profesor:</strong> {{ tarea.profesorNombre || 'Sin nombre' }} ({{ tarea.profesorEmail || '-' }})</p>
+              <p><strong>Tarea:</strong> {{ tarea.descripcionTarea || 'Sin tarea definida' }}</p>
+            </article>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -201,7 +236,8 @@ export default {
       expulsionesPdf: [],
       cargandoPdfId: null,
       cargandoExpulsionesPdf: false,
-      observadoresActivos: false
+      observadoresActivos: false,
+      modalExpulsion: null
     }
   },
   computed: {
@@ -539,6 +575,38 @@ export default {
         this.cargandoPdfId = null
       }
     },
+    async abrirDetalleExpulsion(expulsion) {
+      if (!expulsion?.expulsionId) {
+        return
+      }
+
+      this.modalExpulsion = {
+        expulsionId: expulsion.expulsionId,
+        alumnoNombreCompleto: expulsion.alumnoNombreCompleto,
+        curso: expulsion.curso,
+        grupo: expulsion.grupo,
+        cargando: true,
+        tareas: []
+      }
+
+      try {
+        const { data } = await axios.get(`${API_URL}/tareas-expulsion/expulsion/${expulsion.expulsionId}`)
+        this.modalExpulsion = {
+          ...this.modalExpulsion,
+          cargando: false,
+          tareas: data || []
+        }
+      } catch {
+        this.modalExpulsion = {
+          ...this.modalExpulsion,
+          cargando: false,
+          tareas: []
+        }
+      }
+    },
+    cerrarDetalleExpulsion() {
+      this.modalExpulsion = null
+    },
     formatearFecha(fecha) {
       if (!fecha) return ''
       return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')
@@ -834,6 +902,88 @@ tbody tr:last-child td {
 .pill-pending { background: #fef3c7; color: #92400e; }
 .pill-ok { background: #dcfce7; color: #166534; }
 
+.alumno-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #1f3f5a;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.alumno-link:hover {
+  color: #0f4c5c;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1600;
+}
+
+.modal-detalle {
+  width: min(840px, 96vw);
+  max-height: 86vh;
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #d7e1ea;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.3);
+  padding: 1rem;
+}
+
+.modal-detalle-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+  border-bottom: 1px solid #dbe6ef;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.8rem;
+}
+
+.modal-detalle-head h3 {
+  margin: 0;
+  color: #163f60;
+}
+
+.modal-detalle-head p {
+  margin: 0.35rem 0 0;
+  color: #445b70;
+}
+
+.detalle-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.detalle-card {
+  border: 1px solid #dbe6ef;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 0.75rem;
+}
+
+.detalle-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.detalle-card p {
+  margin: 0.35rem 0 0;
+  color: #30485d;
+}
+
 @media (max-width: 980px) {
   .resumen-grid {
     grid-template-columns: 1fr;
@@ -853,6 +1003,10 @@ tbody tr:last-child td {
 
   table {
     min-width: 900px;
+  }
+
+  .modal-detalle-head {
+    flex-direction: column;
   }
 }
 

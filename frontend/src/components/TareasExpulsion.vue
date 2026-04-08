@@ -35,7 +35,11 @@
       >
         <div class="task-head">
           <div>
-            <h3>{{ tarea.alumnoNombreCompleto }}</h3>
+            <h3>
+              <button class="alumno-link" @click="abrirDetalleAlumno(tarea)">
+                {{ tarea.alumnoNombreCompleto }}
+              </button>
+            </h3>
             <p class="asignatura">{{ tarea.asignatura }}</p>
           </div>
           <span :class="['pill', tarea.estado === 'COMPLETADA' ? 'pill-ok' : 'pill-pending']">
@@ -83,6 +87,36 @@
     </div>
 
     <p v-else class="sin-datos">No tienes tareas de expulsión asignadas.</p>
+
+    <div v-if="modalAlumno" class="modal-overlay" @click="cerrarDetalleAlumno">
+      <div class="modal-detalle" @click.stop>
+        <div class="modal-detalle-head">
+          <div>
+            <h3>Detalle del alumno</h3>
+            <p>{{ modalAlumno.alumnoNombreCompleto }}</p>
+          </div>
+          <button class="modal-close" @click="cerrarDetalleAlumno">Cerrar</button>
+        </div>
+
+        <div class="modal-rango-fechas">
+          <span><strong>Desde:</strong> {{ formatearFecha(modalAlumno.fechaInicioExpulsion) }}</span>
+          <span><strong>Hasta:</strong> {{ formatearFecha(modalAlumno.fechaFinExpulsion) }}</span>
+        </div>
+
+        <div class="modal-tareas-lista">
+          <article v-for="item in modalAlumno.tareas" :key="item.id" class="modal-tarea-item">
+            <div class="modal-tarea-row">
+              <strong>{{ item.asignatura || 'Sin asignatura' }}</strong>
+              <span :class="['pill', item.estado === 'COMPLETADA' ? 'pill-ok' : 'pill-pending']">
+                {{ item.estado === 'COMPLETADA' ? 'Completada' : 'Pendiente' }}
+              </span>
+            </div>
+            <p><strong>Profesor:</strong> {{ item.profesorNombre || 'Sin nombre' }} ({{ item.profesorEmail }})</p>
+            <p><strong>Tarea:</strong> {{ item.descripcionTarea || 'Sin tarea definida' }}</p>
+          </article>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -107,7 +141,8 @@ export default {
       toastMensaje: '',
       toastTipo: 'success',
       toastTimer: null,
-      cargandoId: null
+      cargandoId: null,
+      modalAlumno: null
     }
   },
   computed: {
@@ -199,6 +234,21 @@ export default {
           [tareaId]: this.normalizarDescripcionParaEdicion(tarea.descripcionTarea)
         }
       }
+    },
+    abrirDetalleAlumno(tarea) {
+      const tareasAlumno = this.tareas
+        .filter(item => item.expulsionId === tarea.expulsionId)
+        .sort((a, b) => (a.asignatura || '').localeCompare(b.asignatura || ''))
+
+      this.modalAlumno = {
+        alumnoNombreCompleto: tarea.alumnoNombreCompleto,
+        fechaInicioExpulsion: tarea.fechaInicioExpulsion,
+        fechaFinExpulsion: tarea.fechaFinExpulsion,
+        tareas: tareasAlumno
+      }
+    },
+    cerrarDetalleAlumno() {
+      this.modalAlumno = null
     },
     mostrarToast(texto, tipo = 'success') {
       if (this.toastTimer) {
@@ -376,6 +426,23 @@ h2 {
   color: #0f172a;
 }
 
+.alumno-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+}
+
+.alumno-link:hover {
+  color: #4338ca;
+  text-decoration: underline;
+}
+
 .asignatura {
   margin: 0.2rem 0 0;
   font-size: 0.86rem;
@@ -520,6 +587,97 @@ h2 {
   border-radius: 10px;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+  padding: 1rem;
+}
+
+.modal-detalle {
+  width: min(760px, 96vw);
+  max-height: 85vh;
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #dbe5f4;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+  padding: 1rem;
+}
+
+.modal-detalle-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.modal-detalle-head h3 {
+  margin: 0;
+}
+
+.modal-detalle-head p {
+  margin: 0.2rem 0 0;
+  color: #334155;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: #ffffff;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: #0f766e;
+}
+
+.modal-rango-fechas {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+  color: #334155;
+}
+
+.modal-tareas-lista {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.modal-tarea-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.7rem;
+  background: #f8fafc;
+}
+
+.modal-tarea-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.modal-tarea-item p {
+  margin: 0.25rem 0 0;
+  color: #334155;
+}
+
 @media (max-width: 900px) {
   .header-expulsion {
     flex-direction: column;
@@ -540,6 +698,19 @@ h2 {
 
   .meta-row {
     grid-template-columns: 1fr;
+  }
+
+  .modal-detalle {
+    padding: 0.8rem;
+  }
+
+  .modal-detalle-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal-close {
+    align-self: flex-end;
   }
 }
 </style>

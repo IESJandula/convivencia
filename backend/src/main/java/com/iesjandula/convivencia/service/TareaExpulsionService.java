@@ -29,6 +29,17 @@ public class TareaExpulsionService {
                 .collect(Collectors.toList());
     }
 
+    public List<TareaExpulsionDto> listarPorExpulsion(Integer expulsionId) {
+        if (expulsionId == null) {
+            throw new RuntimeException("Debe indicar la expulsión");
+        }
+
+        return tareaExpulsionRepository.findByExpulsionId(expulsionId).stream()
+                .sorted(Comparator.comparing(TareaExpulsion::getAsignatura, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public TareaExpulsionDto marcarCompletada(Integer tareaId, String profesorEmail) {
         return actualizarTareaProfesor(tareaId, profesorEmail, null, true);
