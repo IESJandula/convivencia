@@ -208,7 +208,7 @@
 
 <script>
 import axios from 'axios'
-const API_URL = 'http://http://api-convivencia.51.210.104.106.sslip.io/api'
+const API_URL = 'http://api-convivencia.51.210.104.106.sslip.io/api'
 const JEFATURA_STATE_KEY = 'jefatura_validar_sanciones_state'
 
 export default {

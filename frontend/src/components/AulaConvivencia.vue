@@ -180,7 +180,7 @@
 <script>
 import axios from 'axios'
 
-const API_URL = 'http://http://api-convivencia.51.210.104.106.sslip.io/api'
+const API_URL = 'http://api-convivencia.51.210.104.106.sslip.io/api'
 
 export default {
   name: 'AulaConvivencia',
@@ -313,7 +313,7 @@ export default {
     abrirDocumento(url) {
       // Si es una URL relativa del backend, construir la URL completa
       if (url.startsWith('/api/')) {
-        url = `http://http://api-convivencia.51.210.104.106.sslip.io${url}`
+        url = `http://api-convivencia.51.210.104.106.sslip.io${url}`
       }
       window.open(url, '_blank')
     },
