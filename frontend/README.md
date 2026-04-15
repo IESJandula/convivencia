@@ -6,7 +6,7 @@ Instrucciones:
 2. npm install
 3. npm run dev
 
-Endpoints esperados en backend (http://localhost:8080):
+Endpoints esperados en backend (http://http://api-convivencia.51.210.104.106.sslip.io):
 - GET /api/partes
 - POST /api/partes
 - GET /api/partes/conductas

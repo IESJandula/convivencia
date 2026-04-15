@@ -214,7 +214,7 @@
 <script>
 import axios from 'axios'
 
-const API_URL = 'http://localhost:8080/api'
+const API_URL = 'http://http://api-convivencia.51.210.104.106.sslip.io/api'
 
 export default {
   name: 'Historial',
@@ -403,7 +403,7 @@ export default {
       
       // Si es una URL relativa del backend, construir la URL completa
       if (url.startsWith('/api/')) {
-        const urlCompleta = `http://localhost:8080${url}`
+        const urlCompleta = `http://http://api-convivencia.51.210.104.106.sslip.io${url}`
         console.log('URL completa:', urlCompleta)
         return urlCompleta
       }

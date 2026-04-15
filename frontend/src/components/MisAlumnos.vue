@@ -116,7 +116,7 @@
 
 <script>
 import axios from 'axios'
-const API_URL = 'http://localhost:8080/api'
+const API_URL = 'http://http://api-convivencia.51.210.104.106.sslip.io/api'
 
 export default {
   name: 'MisAlumnos',
