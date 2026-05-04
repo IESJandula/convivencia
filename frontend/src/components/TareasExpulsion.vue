@@ -122,8 +122,7 @@
 
 <script>
 import axios from 'axios'
-
-const API_URL = 'http://api-convivencia.51.210.104.106.sslip.io/api'
+import { API_URL } from '@/config/api'
 const TEXTO_TAREA_AUTOGENERADA = 'tarea pendiente por expulsión del alumno'
 
 export default {

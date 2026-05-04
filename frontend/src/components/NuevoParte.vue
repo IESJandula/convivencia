@@ -69,22 +69,32 @@
           </div>
         </div>
 
-        <div class="field-group">
-          <label>Conducta detectada:</label>
-          <select v-model="parte.conductaId" class="jandula-input" required>
-            <option value="">Seleccione el tipo de falta...</option>
-            <option v-for="c in conductas" :key="c.id" :value="c.id">
-              {{ c.codigo }} - {{ c.descripcion }}
-            </option>
-          </select>
-        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <label>Tipo de conducta:</label>
+            <select v-model="parte.gravedad" class="jandula-input" required>
+              <option value="LEVE">LEVE</option>
+              <option value="GRAVE">GRAVE</option>
+            </select>
+          </div>
 
-        <div class="field-group">
-          <label>Gravedad del parte:</label>
-          <select v-model="parte.gravedad" class="jandula-input" required>
-            <option value="LEVE">LEVE</option>
-            <option value="GRAVE">GRAVE</option>
-          </select>
+          <div class="field-group conducta-wide">
+            <label>Conducta detectada:</label>
+            <button
+              type="button"
+              class="jandula-input conducta-trigger"
+              :disabled="!conductasFiltradas.length"
+              @click="abrirConductaModal"
+            >
+              <span v-if="conductaSeleccionada">
+                {{ conductaSeleccionada.codigo }} - {{ conductaSeleccionada.descripcion }}
+              </span>
+              <span v-else>
+                {{ parte.gravedad ? 'Seleccione la conducta...' : 'Seleccione el tipo de conducta' }}
+              </span>
+            </button>
+            <input type="hidden" v-model="parte.conductaId" required />
+          </div>
         </div>
 
         <div class="field-group">
@@ -143,13 +153,40 @@
         </div>
       </form>
     </div>
+
+    <div v-if="mostrarConductaModal" class="conducta-modal-overlay" @click.self="cerrarConductaModal">
+      <div class="conducta-modal">
+        <div class="conducta-modal-header">
+          <h4>Selecciona la conducta</h4>
+          <button type="button" class="btn-close" @click="cerrarConductaModal">×</button>
+        </div>
+        <input
+          v-model="filtroConducta"
+          class="jandula-input"
+          type="text"
+          placeholder="Buscar por codigo o descripcion..."
+        />
+        <div class="conducta-modal-list">
+          <button
+            v-for="c in conductasFiltradasModal"
+            :key="c.id"
+            type="button"
+            class="conducta-item"
+            @click="seleccionarConducta(c)"
+          >
+            <span class="conducta-code">{{ c.codigo }}</span>
+            <span class="conducta-text">{{ c.descripcion }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 /* Mantenemos exactamente tu lógica que ya te funcionaba */
 import axios from 'axios'
-const API_URL = 'http://api-convivencia.51.210.104.106.sslip.io/api'
+import { API_URL } from '@/config/api'
 
 export default {
   name: 'NuevoParte',
@@ -181,7 +218,9 @@ export default {
       archivoPreview: null,
       archivoNombre: '',
       subiendoArchivo: false,
-      progresoSubida: 0
+      progresoSubida: 0,
+      mostrarConductaModal: false,
+      filtroConducta: ''
     }
   },
   mounted() {
@@ -193,6 +232,40 @@ export default {
       if (!this.archivoSeleccionado && !this.parte.archivoUrl) return false
       const nombre = this.archivoNombre || this.parte.archivoUrl || ''
       return /\.(jpg|jpeg|png|gif|webp)$/i.test(nombre)
+    },
+    rolProfesor() {
+      const profesor = JSON.parse(localStorage.getItem('profesor') || 'null')
+      if (!profesor) return 'PROFESOR'
+      if (profesor.rol) return profesor.rol
+      const email = (profesor.email || '').toLowerCase()
+      if (email.includes('jefe')) return 'JEFATURA'
+      if (email.includes('tutor')) return 'TUTOR'
+      return 'PROFESOR'
+    },
+    conductasFiltradas() {
+      const tipo = this.parte.gravedad
+      const esJefatura = this.rolProfesor === 'JEFATURA'
+      const codigosRD327 = [
+        '1a', '1b', '1c', '1d', '1e', '1f', '1g',
+        '2a', '2b', '2c', '2d', '2e', '2f', '2g', '2h', '2i', '2j', '2k'
+      ]
+      return this.conductas
+        .filter(c => codigosRD327.includes(String(c.codigo || '').toLowerCase()))
+        .filter(c => !tipo || String(c.gravedad || '').toUpperCase() === tipo)
+        .filter(c => esJefatura || String(c.codigo || '').toLowerCase() !== '2i')
+        .sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true }))
+    },
+    conductaSeleccionada() {
+      return this.conductas.find(c => String(c.id) === String(this.parte.conductaId)) || null
+    },
+    conductasFiltradasModal() {
+      const filtro = this.filtroConducta.trim().toLowerCase()
+      if (!filtro) return this.conductasFiltradas
+      return this.conductasFiltradas.filter(c => {
+        const codigo = String(c.codigo || '').toLowerCase()
+        const descripcion = String(c.descripcion || '').toLowerCase()
+        return codigo.includes(filtro) || descripcion.includes(filtro)
+      })
     }
   },
   methods: {
@@ -202,9 +275,24 @@ export default {
     },
     async cargarConductas() {
       try {
-        const response = await axios.get(`${API_URL}/conductas`)
+        const incluir2i = this.rolProfesor === 'JEFATURA'
+        const response = await axios.get(`${API_URL}/conductas`, {
+          params: { incluir2i }
+        })
         this.conductas = response.data
       } catch (e) { console.error(e) }
+    },
+    abrirConductaModal() {
+      if (!this.conductasFiltradas.length) return
+      this.filtroConducta = ''
+      this.mostrarConductaModal = true
+    },
+    cerrarConductaModal() {
+      this.mostrarConductaModal = false
+    },
+    seleccionarConducta(conducta) {
+      this.parte.conductaId = conducta?.id || ''
+      this.mostrarConductaModal = false
     },
     async cargarAlumnos() {
       if (!this.parte.curso) return
@@ -264,6 +352,12 @@ export default {
     limpiarFormulario() {
       this.parte = { profesorEmail: this.parte.profesorEmail, fecha: new Date().toISOString().split('T')[0], curso: '', alumnoId: '', descripcion: '', gravedad: 'LEVE', medidaTomada: 'AULA_CONVIVENCIA', tareas: '', archivoUrl: '', conductaId: '' }
       this.alumnos = []
+      this.mostrarConductaModal = false
+    }
+  },
+  watch: {
+    'parte.gravedad'() {
+      this.parte.conductaId = ''
     }
   },
   beforeUnmount() {
@@ -363,13 +457,19 @@ export default {
 /* Card Blanca con Borde Azul */
 .card-jandula {
   background: white;
-  max-width: 980px;
-  margin: 0 auto;
+  max-width: 1200px;
+  margin: 0 auto 0 24px;
   padding: 30px;
   border-radius: 14px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
   border: 1px solid #dce5ee;
   border-top: 5px solid var(--j-primary);
+}
+
+@media (max-width: 1100px) {
+  .card-jandula {
+    margin: 0 auto;
+  }
 }
 
 .parte-form {
@@ -395,6 +495,105 @@ export default {
 
 .field-group {
   margin-bottom: 16px;
+}
+
+.conducta-wide {
+  grid-column: 1 / -1;
+  overflow: visible;
+}
+
+.conducta-select {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.conducta-trigger {
+  text-align: left;
+  cursor: pointer;
+}
+
+.conducta-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.conducta-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+  padding: 16px;
+}
+
+.conducta-modal {
+  background: #ffffff;
+  width: min(900px, 92vw);
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.25);
+  border: 1px solid #dce5ee;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conducta-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.conducta-modal-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #0f4c5c;
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.conducta-modal-list {
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.conducta-item {
+  text-align: left;
+  border: 1px solid #dce5ee;
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.conducta-item:hover {
+  border-color: rgba(31, 122, 140, 0.7);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.conducta-code {
+  font-weight: 800;
+  color: #0f4c5c;
+}
+
+.conducta-text {
+  color: #1f2937;
+  line-height: 1.4;
 }
 
 .field-group label {

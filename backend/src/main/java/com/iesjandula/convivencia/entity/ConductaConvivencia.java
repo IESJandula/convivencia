@@ -23,12 +23,24 @@ public class ConductaConvivencia {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String descripcion;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Gravedad gravedad = Gravedad.LEVE;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
+        if (gravedad == null) {
+            gravedad = Gravedad.LEVE;
+        }
         createdAt = LocalDateTime.now();
+    }
+
+    public enum Gravedad {
+        LEVE,
+        GRAVE
     }
 }
 

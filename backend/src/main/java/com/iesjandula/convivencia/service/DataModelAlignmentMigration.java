@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Component
 public class DataModelAlignmentMigration implements ApplicationRunner {
 
-    private static final String MIGRATION_KEY = "2026-03-22-unified-model-alignment-v10";
+    private static final String MIGRATION_KEY = "2026-05-04-conductas-rd327-cleanup-v12";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -32,6 +32,7 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
         }
 
         ensureCoreColumnsAndDefaults();
+        seedConductasRD327();
         alignProfesoresRoleEnum();
         alignReferenceColumnsToProfesorEmail();
         ensureMissingProfesoresForReferences();
@@ -223,6 +224,7 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     codigo VARCHAR(10) NOT NULL,
                     descripcion TEXT NOT NULL,
+                    gravedad VARCHAR(10) NOT NULL DEFAULT 'LEVE',
                     created_at DATETIME NULL
                 )
                 """);
@@ -349,6 +351,7 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
 
         addColumnIfMissing("conductas_convivencia", "codigo", "VARCHAR(10) NULL");
         addColumnIfMissing("conductas_convivencia", "descripcion", "TEXT NULL");
+        addColumnIfMissing("conductas_convivencia", "gravedad", "VARCHAR(10) NULL");
         addColumnIfMissing("conductas_convivencia", "created_at", "DATETIME NULL");
     }
 
@@ -443,6 +446,7 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
         if (tableExists("conductas_convivencia")) {
             jdbcTemplate.update("UPDATE conductas_convivencia SET codigo = 'N/A' WHERE codigo IS NULL OR TRIM(codigo) = ''");
             jdbcTemplate.update("UPDATE conductas_convivencia SET descripcion = 'Pendiente descripción' WHERE descripcion IS NULL OR TRIM(descripcion) = ''");
+            jdbcTemplate.update("UPDATE conductas_convivencia SET gravedad = 'LEVE' WHERE gravedad IS NULL OR TRIM(gravedad) = ''");
             jdbcTemplate.update("UPDATE conductas_convivencia SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL");
         }
 
@@ -494,6 +498,62 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
                 SET asignatura = 'Pendiente asignatura'
                 WHERE asignatura IS NULL OR TRIM(asignatura) = ''
                 """);
+    }
+
+    private void seedConductasRD327() {
+        if (!tableExists("conductas_convivencia")) {
+            return;
+        }
+
+        upsertConducta("1a", "Los actos que perturben el normal desarrollo de las actividades de la clase.", "LEVE");
+        upsertConducta("1b", "La falta de colaboración sistemática del alumnado en la realización de las actividades orientadas al desarrollo del currículo, así como en el seguimiento de las orientaciones del profesorado respecto a su aprendizaje.", "LEVE");
+        upsertConducta("1c", "Las conductas que puedan impedir o dificultar el ejercicio del derecho o el cumplimiento del deber de estudiar por sus compañeros y compañeras.", "LEVE");
+        upsertConducta("1d", "Las faltas injustificadas de puntualidad.", "LEVE");
+        upsertConducta("1e", "Las faltas injustificadas de asistencia a clase.", "LEVE");
+        upsertConducta("1f", "La incorrección y desconsideración hacia los otros miembros de la comunidad educativa.", "LEVE");
+        upsertConducta("1g", "Causar pequeños daños en las instalaciones, recursos materiales o documentos del centro, o en las pertenencias de los demás miembros de la comunidad educativa.", "LEVE");
+
+        upsertConducta("2a", "La agresión física contra cualquier miembro de la comunidad educativa.", "GRAVE");
+        upsertConducta("2b", "Las injurias y ofensas contra cualquier miembro de la comunidad educativa.", "GRAVE");
+        upsertConducta("2c", "El acoso escolar, entendido como el maltrato psicológico, verbal o físico hacia un alumno o alumna producido por uno o más compañeros de forma reiterada a lo largo de un tiempo determinado.", "GRAVE");
+        upsertConducta("2d", "Las actuaciones perjudiciales para la salud y la integridad personal de los miembros de la comunidad educativa, o la incitación a las mismas.", "GRAVE");
+        upsertConducta("2e", "Las vejaciones o humillaciones contra cualquier miembro de la comunidad educativa, particularmente si tienen componente sexual, racial, religiosa, xenófoba o de orientación sexual, así como aquellas que se realicen contra el alumnado con necesidades educativas especiales.", "GRAVE");
+        upsertConducta("2f", "Las amenazas o coacciones contra cualquier miembro de la comunidad educativa.", "GRAVE");
+        upsertConducta("2g", "La suplantación de la personalidad en actos de la vida docente y la falsificación o sustracción de documentos académicos.", "GRAVE");
+        upsertConducta("2h", "Las actuaciones que causen graves daños en las instalaciones, recursos materiales o documentos del centro, o en las pertenencias de los demás miembros de la comunidad educativa, así como la sustracción de las mismas.", "GRAVE");
+        upsertConducta("2i", "(Solo Jefatura) La reiteración en un mismo curso escolar de conductas contrarias a las normas de convivencia del centro.", "GRAVE");
+        upsertConducta("2j", "Cualquier acto dirigido directamente a impedir el normal desarrollo de las actividades del centro.", "GRAVE");
+        upsertConducta("2k", "El incumplimiento de las correcciones impuestas, salvo que la comisión de convivencia considere que este incumplimiento sea debido a causas justificadas.", "GRAVE");
+
+        purgeConductasFueraDeRD327();
+    }
+
+    private void purgeConductasFueraDeRD327() {
+        jdbcTemplate.update("""
+                DELETE FROM conductas_convivencia
+                WHERE codigo IS NULL
+                   OR TRIM(codigo) = ''
+                   OR codigo NOT IN (
+                        '1a','1b','1c','1d','1e','1f','1g',
+                        '2a','2b','2c','2d','2e','2f','2g','2h','2i','2j','2k'
+                   )
+                """);
+    }
+
+    private void upsertConducta(String codigo, String descripcion, String gravedad) {
+        jdbcTemplate.update("""
+                INSERT INTO conductas_convivencia (codigo, descripcion, gravedad, created_at)
+                SELECT ?, ?, ?, CURRENT_TIMESTAMP
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM conductas_convivencia WHERE codigo = ?
+                )
+                """, codigo, descripcion, gravedad, codigo);
+
+        jdbcTemplate.update("""
+                UPDATE conductas_convivencia
+                SET descripcion = ?, gravedad = ?
+                WHERE codigo = ?
+                """, descripcion, gravedad, codigo);
     }
 
     private void ensureMigrationTable() {
