@@ -524,20 +524,27 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
         upsertConducta("2i", "(Solo Jefatura) La reiteración en un mismo curso escolar de conductas contrarias a las normas de convivencia del centro.", "GRAVE");
         upsertConducta("2j", "Cualquier acto dirigido directamente a impedir el normal desarrollo de las actividades del centro.", "GRAVE");
         upsertConducta("2k", "El incumplimiento de las correcciones impuestas, salvo que la comisión de convivencia considere que este incumplimiento sea debido a causas justificadas.", "GRAVE");
-
-        purgeConductasFueraDeRD327();
     }
 
     private void purgeConductasFueraDeRD327() {
-        jdbcTemplate.update("""
-                DELETE FROM conductas_convivencia
-                WHERE codigo IS NULL
-                   OR TRIM(codigo) = ''
-                   OR codigo NOT IN (
-                        '1a','1b','1c','1d','1e','1f','1g',
-                        '2a','2b','2c','2d','2e','2f','2g','2h','2i','2j','2k'
-                   )
-                """);
+        try {
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
+
+            String sql = """
+                    DELETE FROM conductas_convivencia
+                    WHERE codigo IS NULL
+                       OR TRIM(codigo) = ''
+                       OR codigo NOT IN (
+                            '1a','1b','1c','1d','1e','1f','1g',
+                            '2a','2b','2c','2d','2e','2f','2g','2h','2i','2j','2k'
+                       )
+                    """;
+            jdbcTemplate.update(sql);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al limpiar conductas", e);
+        } finally {
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
+        }
     }
 
     private void upsertConducta(String codigo, String descripcion, String gravedad) {
