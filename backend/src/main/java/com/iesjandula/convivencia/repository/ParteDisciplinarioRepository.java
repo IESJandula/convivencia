@@ -18,7 +18,10 @@ public interface ParteDisciplinarioRepository extends JpaRepository<ParteDiscipl
     List<ParteDisciplinario> findByEstadoAndActivoTrue(Estado estado);
     List<ParteDisciplinario> findByFechaAndActivoTrue(LocalDate fecha);
     List<ParteDisciplinario> findByActivoTrue();
-        List<ParteDisciplinario> findByAlumnoCursoAndAlumnoGrupoAndActivoTrueOrderByFechaDesc(String curso, String grupo);
+    List<ParteDisciplinario> findByAlumnoCursoAndAlumnoGrupoAndActivoTrueOrderByFechaDesc(String curso, String grupo);
+
+    long countByAlumnoIdAndGravedadAndActivoTrue(Integer alumnoId, ParteDisciplinario.Gravedad gravedad);
+
 
         @Query("""
             SELECT p FROM ParteDisciplinario p

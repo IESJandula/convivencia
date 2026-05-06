@@ -311,6 +311,10 @@ export default {
         this.mensaje = ''
         this.mensajeTipo = ''
         this.mostrarToast('Parte creado con exito', 'success')
+        
+        // Despachar evento para refrescar avisos inmediatamente
+        window.dispatchEvent(new CustomEvent('parte-creado'))
+        
         this.limpiarFormulario()
       } catch (e) {
         this.mensaje = '❌ Error al guardar'

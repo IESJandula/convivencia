@@ -18,15 +18,21 @@ public class ParteService {
     private final AlumnoRepository alumnoRepository;
     private final ProfesorRepository profesorRepository;
     private final ConductaConvivenciaRepository conductaRepository;
+    private final AvisoJefaturaRepository avisoJefaturaRepository;
+    private final ExpulsionRepository expulsionRepository;
 
     public ParteService(ParteDisciplinarioRepository parteRepository,
                         AlumnoRepository alumnoRepository,
                         ProfesorRepository profesorRepository,
-                        ConductaConvivenciaRepository conductaRepository) {
+                        ConductaConvivenciaRepository conductaRepository,
+                        AvisoJefaturaRepository avisoJefaturaRepository,
+                        ExpulsionRepository expulsionRepository) {
         this.parteRepository = parteRepository;
         this.alumnoRepository = alumnoRepository;
         this.profesorRepository = profesorRepository;
         this.conductaRepository = conductaRepository;
+        this.avisoJefaturaRepository = avisoJefaturaRepository;
+        this.expulsionRepository = expulsionRepository;
     }
 
     @Transactional
@@ -63,7 +69,26 @@ public class ParteService {
         parte.setEstadoComputo(ParteDisciplinario.EstadoComputo.ACTIVO);
         parte.setActivo(true);
 
-        return parteRepository.save(parte);
+        ParteDisciplinario guardado = parteRepository.save(parte);
+
+        // Lógica de avisos a Jefatura
+        if (guardado.getGravedad() == ParteDisciplinario.Gravedad.LEVE && guardado.getActivo()) {
+            long partesLeves = parteRepository.countByAlumnoIdAndGravedadAndActivoTrue(alumno.getId(), ParteDisciplinario.Gravedad.LEVE);
+            if (partesLeves >= 3) {
+                boolean tieneAvisoPendiente = avisoJefaturaRepository.findByLeidoFalseAndActivoTrueOrderByFechaCreacionDesc()
+                        .stream()
+                        .anyMatch(a -> a.getAlumno().getId().equals(alumno.getId()));
+                
+                if (!tieneAvisoPendiente) {
+                    AvisoJefatura aviso = new AvisoJefatura();
+                    aviso.setAlumno(alumno);
+                    aviso.setMensaje("El alumno " + alumno.getNombre() + " " + alumno.getApellidos() + " ha acumulado " + partesLeves + " partes leves.");
+                    avisoJefaturaRepository.save(aviso);
+                }
+            }
+        }
+
+        return guardado;
     }
 
     public List<ParteDisciplinario> listarTodos() {

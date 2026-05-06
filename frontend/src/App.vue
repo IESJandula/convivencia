@@ -14,6 +14,42 @@
         </div>
         
         <div class="navbar-right">
+          <!-- Botón Avisos Jefatura -->
+          <div v-if="rolUsuario === 'JEFATURA'" class="notifications-wrapper" @click="toggleAvisos">
+            <button class="btn-avisos-jandula" :class="{'has-alerts': avisosNoLeidos.length > 0}" title="Avisos">
+              <svg class="bell-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span v-if="avisosNoLeidos.length > 0" class="badge-avisos">{{ avisosNoLeidos.length }}</span>
+            </button>
+            
+            <!-- Dropdown Avisos -->
+            <transition name="dropdown">
+              <div v-if="mostrarAvisos" class="avisos-dropdown" @click.stop>
+                <div class="avisos-header">
+                  <h3>Notificaciones</h3>
+                  <button v-if="avisosNoLeidos.length > 0" class="btn-close-dropdown" @click="mostrarAvisos = false">✖</button>
+                </div>
+                <div v-if="avisosNoLeidos.length === 0" class="avisos-empty">
+                  No tienes avisos nuevos
+                </div>
+                <div v-else class="avisos-list">
+                  <div v-for="aviso in avisosNoLeidos" :key="aviso.id" class="aviso-item">
+                    <div class="aviso-content">
+                      <span class="aviso-icon">⚠️</span>
+                      <p class="aviso-text">{{ aviso.mensaje }}</p>
+                    </div>
+                    <div class="aviso-actions">
+                      <button class="btn-aviso-action view" @click="verHistorial(aviso)">Ver historial</button>
+                      <button class="btn-aviso-action dismiss" @click="marcarLeido(aviso.id)">Marcar leído</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </transition>
+          </div>
+
           <button @click="cerrarSesion" class="btn-logout-jandula" title="Cerrar Sesión">
             <svg class="logout-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
@@ -53,8 +89,7 @@
 
 <script>
 import axios from 'axios'
-
-const API_URL = 'http://api-convivencia.51.210.104.106.sslip.io/api'
+import { API_URL } from './config/api.js'
 
 export default {
   name: 'App',
@@ -65,7 +100,10 @@ export default {
       esGuardiaUsuario: false,
       profesorEmail: '',
       tareasPendientes: 0,
-      tareasRefreshTimer: null
+      tareasRefreshTimer: null,
+      avisosNoLeidos: [],
+      mostrarAvisos: false,
+      avisosRefreshTimer: null
     }
   },
   computed: {
@@ -83,11 +121,15 @@ export default {
   },
   mounted() {
     window.addEventListener('tareas-expulsion-pendientes', this.actualizarPendientesDesdeEvento)
+    window.addEventListener('parte-creado', this.cargarAvisos)
     this.cargarDatosUsuario()
   },
   beforeUnmount() {
     window.removeEventListener('tareas-expulsion-pendientes', this.actualizarPendientesDesdeEvento)
+    window.removeEventListener('parte-creado', this.cargarAvisos)
     this.limpiarTemporizadorPendientes()
+    this.limpiarTemporizadorAvisos()
+    document.removeEventListener('click', this.cerrarAvisosClickFuera)
   },
   watch: { '$route'() { this.cargarDatosUsuario() } },
   methods: {
@@ -128,20 +170,33 @@ export default {
     },
     configurarIndicadorPendientes() {
       this.limpiarTemporizadorPendientes()
-      if (this.rolUsuario !== 'PROFESOR' || !this.profesorEmail) {
-        this.tareasPendientes = 0
-        return
+      this.limpiarTemporizadorAvisos()
+
+      if (this.rolUsuario === 'PROFESOR' && this.profesorEmail) {
+        this.actualizarIndicadorTareas()
+        this.tareasRefreshTimer = setInterval(() => {
+          this.actualizarIndicadorTareas()
+        }, 30000)
       }
 
-      this.actualizarIndicadorTareas()
-      this.tareasRefreshTimer = setInterval(() => {
-        this.actualizarIndicadorTareas()
-      }, 30000)
+      if (this.rolUsuario === 'JEFATURA') {
+        this.cargarAvisos()
+        this.avisosRefreshTimer = setInterval(() => {
+          this.cargarAvisos()
+        }, 30000)
+        document.addEventListener('click', this.cerrarAvisosClickFuera)
+      }
     },
     limpiarTemporizadorPendientes() {
       if (this.tareasRefreshTimer) {
         clearInterval(this.tareasRefreshTimer)
         this.tareasRefreshTimer = null
+      }
+    },
+    limpiarTemporizadorAvisos() {
+      if (this.avisosRefreshTimer) {
+        clearInterval(this.avisosRefreshTimer)
+        this.avisosRefreshTimer = null
       }
     },
     async actualizarIndicadorTareas() {
@@ -163,6 +218,39 @@ export default {
       if (!Number.isNaN(count)) {
         this.tareasPendientes = Math.max(0, count)
       }
+    },
+    async cargarAvisos() {
+      try {
+        const { data } = await axios.get(`${API_URL}/avisos?soloNoLeidos=true`)
+        this.avisosNoLeidos = Array.isArray(data) ? data : []
+      } catch (error) {
+        console.error('Error cargando avisos:', error)
+      }
+    },
+    toggleAvisos() {
+      this.mostrarAvisos = !this.mostrarAvisos
+    },
+    cerrarAvisosClickFuera(event) {
+      const dropdown = this.$el.querySelector('.avisos-dropdown')
+      const btn = this.$el.querySelector('.btn-avisos-jandula')
+      if (this.mostrarAvisos && dropdown && !dropdown.contains(event.target) && btn && !btn.contains(event.target)) {
+        this.mostrarAvisos = false
+      }
+    },
+    async marcarLeido(id) {
+      try {
+        await axios.put(`${API_URL}/avisos/${id}/leer`)
+        this.avisosNoLeidos = this.avisosNoLeidos.filter(a => a.id !== id)
+        if (this.avisosNoLeidos.length === 0) {
+          this.mostrarAvisos = false
+        }
+      } catch (error) {
+        console.error('Error marcando aviso:', error)
+      }
+    },
+    async verHistorial(aviso) {
+      this.mostrarAvisos = false
+      this.$router.push('/historial?alumno_id=' + aviso.alumno.id)
     },
     cerrarSesion() {
       if (confirm('¿Cerrar sesión?')) {
@@ -214,8 +302,85 @@ export default {
 }
 
 /* --- RESTO DE ESTILOS MANTENIDOS --- */
-.btn-logout-jandula { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer; color: white; }
+.navbar-right { display: flex; align-items: center; gap: 15px; }
+.btn-logout-jandula { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer; color: white; transition: background 0.2s; }
+.btn-logout-jandula:hover { background: rgba(255,255,255,0.3); }
 .logout-icon-svg { width: 22px; height: 22px; }
+
+/* Estilos de Avisos */
+.notifications-wrapper { position: relative; }
+.btn-avisos-jandula {
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px; cursor: pointer; color: white; position: relative;
+  transition: all 0.3s ease;
+}
+.btn-avisos-jandula:hover { background: rgba(255,255,255,0.3); }
+.bell-icon-svg { width: 22px; height: 22px; transition: transform 0.3s; }
+.btn-avisos-jandula.has-alerts .bell-icon-svg {
+  animation: bell-ring 2s infinite cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.badge-avisos {
+  position: absolute; top: -5px; right: -5px;
+  background-color: #ef4444; color: white;
+  font-size: 11px; font-weight: bold;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px #1c314a;
+  animation: badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.avisos-dropdown {
+  position: absolute; top: 55px; right: 0;
+  width: 320px; background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.5);
+  overflow: hidden; z-index: 1000;
+  transform-origin: top right;
+}
+.avisos-header {
+  padding: 12px 15px; background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.avisos-header h3 { margin: 0; font-size: 14px; color: #1e293b; font-weight: 700; }
+.btn-close-dropdown { background: none; border: none; cursor: pointer; color: #64748b; }
+.avisos-empty { padding: 20px; text-align: center; color: #64748b; font-size: 14px; }
+.avisos-list { max-height: 350px; overflow-y: auto; }
+.aviso-item { padding: 15px; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; }
+.aviso-item:hover { background: #f8fafc; }
+.aviso-item:last-child { border-bottom: none; }
+.aviso-content { display: flex; gap: 10px; margin-bottom: 10px; }
+.aviso-icon { font-size: 18px; }
+.aviso-text { margin: 0; font-size: 13px; color: #334155; line-height: 1.4; }
+.aviso-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-aviso-action {
+  padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 4px; cursor: pointer; border: none;
+}
+.btn-aviso-action.view { background: #0b4e6b; color: white; }
+.btn-aviso-action.view:hover { background: #083b52; }
+.btn-aviso-action.dismiss { background: #e2e8f0; color: #475569; }
+.btn-aviso-action.dismiss:hover { background: #cbd5e1; }
+
+@keyframes bell-ring {
+  0% { transform: rotate(0); }
+  5% { transform: rotate(15deg); }
+  10% { transform: rotate(-15deg); }
+  15% { transform: rotate(10deg); }
+  20% { transform: rotate(-10deg); }
+  25% { transform: rotate(5deg); }
+  30% { transform: rotate(-5deg); }
+  35% { transform: rotate(0); }
+  100% { transform: rotate(0); }
+}
+@keyframes badge-pop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+.dropdown-enter-active, .dropdown-leave-active { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: scale(0.9) translateY(-10px); }
+
 .nav-links { background: #0b4e6b; display: flex; padding: 0 2rem; }
 .nav-button {
   padding: 1rem 1.5rem;

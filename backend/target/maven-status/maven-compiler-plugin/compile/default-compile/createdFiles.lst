@@ -8,6 +8,7 @@ com\iesjandula\convivencia\repository\SesionConvivenciaRepository.class
 com\iesjandula\convivencia\controller\FileUploadController.class
 com\iesjandula\convivencia\controller\SchemaCheckController.class
 com\iesjandula\convivencia\entity\ParteDisciplinario$Estado.class
+com\iesjandula\convivencia\repository\AvisoJefaturaRepository.class
 com\iesjandula\convivencia\dto\ParteRequestDto.class
 com\iesjandula\convivencia\dto\CrearExpulsionResponseDto.class
 com\iesjandula\convivencia\service\ExpulsionService.class
@@ -50,10 +51,12 @@ com\iesjandula\convivencia\entity\TareaExpulsion$Estado.class
 com\iesjandula\convivencia\dto\ActualizarTareaExpulsionRequestDto.class
 com\iesjandula\convivencia\entity\ConductaConvivencia.class
 com\iesjandula\convivencia\dto\TareaExpulsionDto.class
+com\iesjandula\convivencia\controller\AvisoJefaturaController.class
 com\iesjandula\convivencia\repository\ParteExpulsionRepository.class
 com\iesjandula\convivencia\controller\ParteController.class
 com\iesjandula\convivencia\controller\ConductaController.class
 com\iesjandula\convivencia\controller\ExpulsionController.class
 com\iesjandula\convivencia\entity\TareaExpulsion.class
+com\iesjandula\convivencia\entity\AvisoJefatura.class
 com\iesjandula\convivencia\controller\LoginController.class
 com\iesjandula\convivencia\entity\SesionConvivencia$Comportamiento.class
