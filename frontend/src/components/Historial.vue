@@ -31,11 +31,39 @@
         <div class="filtros">
           <div class="form-group">
             <label>Fecha desde</label>
-            <input type="date" v-model="filtroFechaDesde" @change="cargarPartes" />
+            <input type="date" v-model="filtroFechaDesde" />
           </div>
           <div class="form-group">
             <label>Fecha hasta</label>
-            <input type="date" v-model="filtroFechaHasta" @change="cargarPartes" />
+            <input type="date" v-model="filtroFechaHasta" />
+          </div>
+          <div class="form-group">
+            <label>Alumno o Grupo</label>
+            <input type="text" v-model="filtroTextoAlumno" placeholder="Buscar..." />
+          </div>
+          <div class="form-group" v-if="!esVistaProfesor">
+            <label>Profesor</label>
+            <input type="text" v-model="filtroProfesor" placeholder="Nombre de profesor" />
+          </div>
+          <div class="form-group">
+            <label>Gravedad</label>
+            <select v-model="filtroGravedad">
+              <option value="">Todas</option>
+              <option value="LEVE">Leve</option>
+              <option value="GRAVE">Grave</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Conducta</label>
+            <input type="text" v-model="filtroConducta" placeholder="Ej: Faltas de respeto" />
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select v-model="filtroEstadoComputo">
+              <option value="">Todos</option>
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="COMPUTADO">Computado/Expulsado</option>
+            </select>
           </div>
         </div>
       </div>
@@ -224,16 +252,64 @@ export default {
   name: 'Historial',
   data() {
     return {
-      partes: [],
-      partesOriginales: [], // Para guardar todos y sacar el nombre
+      partesOriginales: [],
       filtroFechaDesde: '',
       filtroFechaHasta: '',
+      filtroTextoAlumno: '',
+      filtroProfesor: '',
+      filtroGravedad: '',
+      filtroConducta: '',
+      filtroEstadoComputo: '',
       emailSesion: '',
       rolUsuario: 'PROFESOR',
       parteSeleccionado: null
     }
   },
   computed: {
+    partes() {
+      return this.partesOriginales.filter(parte => {
+        // 1. Rango de Fechas
+        if (!this.coincideConRangoFechas(parte.fecha)) return false
+        
+        // 2. Alumno (por ID si viene en la query)
+        const alumnoIdQuery = this.$route.query.alumno_id
+        if (alumnoIdQuery && parte.alumno.id !== parseInt(alumnoIdQuery)) return false
+        
+        // 3. Alumno (por texto: nombre, apellidos, grupo)
+        if (this.filtroTextoAlumno) {
+          const texto = this.quitarTildes(this.filtroTextoAlumno.toLowerCase())
+          const nombreCompleto = this.quitarTildes(`${parte.alumno.nombre} ${parte.alumno.apellidos}`.toLowerCase())
+          const grupo = this.quitarTildes(`${parte.alumno.curso} ${parte.alumno.grupo || ''}`.toLowerCase())
+          if (!nombreCompleto.includes(texto) && !grupo.includes(texto)) return false
+        }
+        
+        // 4. Profesor
+        if (this.filtroProfesor && !this.esVistaProfesor) {
+          const profFiltro = this.quitarTildes(this.filtroProfesor.toLowerCase())
+          const profNombre = this.quitarTildes(parte.profesor.nombre.toLowerCase())
+          if (!profNombre.includes(profFiltro)) return false
+        }
+        
+        // 5. Gravedad
+        if (this.filtroGravedad && parte.gravedad !== this.filtroGravedad) return false
+        
+        // 6. Conducta
+        if (this.filtroConducta) {
+          const condFiltro = this.quitarTildes(this.filtroConducta.toLowerCase())
+          const conducta = this.quitarTildes(`${parte.conducta.codigo} ${parte.conducta.descripcion}`.toLowerCase())
+          if (!conducta.includes(condFiltro)) return false
+        }
+        
+        // 7. Estado de Cómputo
+        if (this.filtroEstadoComputo) {
+          const estaComp = this.estaComputado(parte)
+          if (this.filtroEstadoComputo === 'COMPUTADO' && !estaComp) return false
+          if (this.filtroEstadoComputo === 'PENDIENTE' && estaComp) return false
+        }
+        
+        return true
+      })
+    },
     esVistaProfesor() {
       return this.rolUsuario === 'PROFESOR' && Boolean(this.emailSesion)
     },
@@ -258,14 +334,12 @@ export default {
     this.inicializarContextoUsuario()
     this.cargarPartes()
   },
-  watch: {
-    '$route.query.alumno_id': {
-      handler() {
-        this.cargarPartes()
-      }
-    }
-  },
   methods: {
+    quitarTildes(texto) {
+      if (!texto) return ''
+      return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    },
+    
     inicializarContextoUsuario() {
       const profesor = JSON.parse(localStorage.getItem('profesor') || 'null')
       this.emailSesion = profesor?.email || ''
@@ -320,14 +394,7 @@ export default {
         }
         
         this.partesOriginales = datos
-        
-        this.partes = datos.filter(parte => {
-          const coincideRango = this.coincideConRangoFechas(parte.fecha)
-          const alumnoIdQuery = this.$route.query.alumno_id
-          const coincideAlumno = alumnoIdQuery ? parte.alumno.id === parseInt(alumnoIdQuery) : true
-          return coincideRango && coincideAlumno
-        })
-        console.log('Partes cargados:', this.partes)
+        console.log('Partes cargados:', this.partesOriginales)
       } catch (error) {
         console.error('Error al cargar partes:', error)
       }
@@ -336,7 +403,11 @@ export default {
     limpiarFiltros() {
       this.filtroFechaDesde = ''
       this.filtroFechaHasta = ''
-      this.cargarPartes()
+      this.filtroTextoAlumno = ''
+      this.filtroProfesor = ''
+      this.filtroGravedad = ''
+      this.filtroConducta = ''
+      this.filtroEstadoComputo = ''
     },
     
     limpiarFiltroAlumno() {
@@ -584,8 +655,8 @@ export default {
 }
 
 .filtros {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.8rem;
   align-items: end;
 }
@@ -594,12 +665,33 @@ export default {
   margin-bottom: 0;
   border: 1px solid #d9dee8;
   border-radius: 8px;
-  padding: 0.7rem;
+  padding: 0.5rem;
   background: #fff;
+  flex: 0 1 auto;
+  min-width: 130px;
+  max-width: 200px;
 }
 
 .btn-filtro {
   height: 40px;
+}
+
+.filtros input, .filtros select {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 0.2rem;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.filtros label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5f7285;
+  margin-bottom: 0.2rem;
 }
 
 .table-shell {
