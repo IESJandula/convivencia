@@ -40,6 +40,11 @@
         </div>
       </div>
 
+      <div v-if="$route.query.alumno_id && nombreAlumnoFiltrado" class="filtro-alumno-banner">
+        <span>Mostrando partes de: <strong>{{ nombreAlumnoFiltrado }}</strong></span>
+        <button @click="limpiarFiltroAlumno" class="btn-clear">Ver todos</button>
+      </div>
+
       <div v-if="partes.length === 0" class="sin-datos">
         <h3>Sin resultados</h3>
         <p>No hay partes registrados para los filtros seleccionados.</p>
@@ -220,6 +225,7 @@ export default {
   data() {
     return {
       partes: [],
+      partesOriginales: [], // Para guardar todos y sacar el nombre
       filtroFechaDesde: '',
       filtroFechaHasta: '',
       emailSesion: '',
@@ -240,11 +246,24 @@ export default {
     tieneValoracionesConvivencia() {
       return Array.isArray(this.parteSeleccionado?.valoracionesConvivencia)
         && this.parteSeleccionado.valoracionesConvivencia.length > 0
+    },
+    nombreAlumnoFiltrado() {
+      const id = this.$route.query.alumno_id
+      if (!id || this.partesOriginales.length === 0) return ''
+      const parte = this.partesOriginales.find(p => p.alumno.id === parseInt(id))
+      return parte ? `${parte.alumno.nombre} ${parte.alumno.apellidos}` : ''
     }
   },
   mounted() {
     this.inicializarContextoUsuario()
     this.cargarPartes()
+  },
+  watch: {
+    '$route.query.alumno_id': {
+      handler() {
+        this.cargarPartes()
+      }
+    }
   },
   methods: {
     inicializarContextoUsuario() {
@@ -291,17 +310,23 @@ export default {
 
     async cargarPartes() {
       try {
+        let datos = []
         if (this.esVistaProfesor) {
           const response = await axios.get(`${API_URL}/partes/profesor/${this.emailSesion}`)
-          const partesProfesor = Array.isArray(response.data) ? response.data : []
-          this.partes = partesProfesor.filter(parte => this.coincideConRangoFechas(parte.fecha))
-          console.log('Partes del profesor cargados:', this.partes)
-          return
+          datos = Array.isArray(response.data) ? response.data : []
+        } else {
+          const response = await axios.get(`${API_URL}/partes`)
+          datos = Array.isArray(response.data) ? response.data : []
         }
-
-        const response = await axios.get(`${API_URL}/partes`)
-        const partes = Array.isArray(response.data) ? response.data : []
-        this.partes = partes.filter(parte => this.coincideConRangoFechas(parte.fecha))
+        
+        this.partesOriginales = datos
+        
+        this.partes = datos.filter(parte => {
+          const coincideRango = this.coincideConRangoFechas(parte.fecha)
+          const alumnoIdQuery = this.$route.query.alumno_id
+          const coincideAlumno = alumnoIdQuery ? parte.alumno.id === parseInt(alumnoIdQuery) : true
+          return coincideRango && coincideAlumno
+        })
         console.log('Partes cargados:', this.partes)
       } catch (error) {
         console.error('Error al cargar partes:', error)
@@ -312,6 +337,10 @@ export default {
       this.filtroFechaDesde = ''
       this.filtroFechaHasta = ''
       this.cargarPartes()
+    },
+    
+    limpiarFiltroAlumno() {
+      this.$router.push('/historial')
     },
     
     async verDetalle(parte) {
@@ -525,6 +554,33 @@ export default {
   border-radius: 10px;
   padding: 0.8rem;
   margin-bottom: 1rem;
+}
+
+.filtro-alumno-banner {
+  background: #fff3cd;
+  color: #856404;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #ffeeba;
+}
+
+.btn-clear {
+  background: #e0a800;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-clear:hover {
+  background: #c69500;
 }
 
 .filtros {

@@ -73,13 +73,18 @@ public class ParteService {
 
         // Lógica de avisos a Jefatura
         if (guardado.getGravedad() == ParteDisciplinario.Gravedad.LEVE && guardado.getActivo()) {
-            long partesLeves = parteRepository.countByAlumnoIdAndGravedadAndActivoTrue(alumno.getId(), ParteDisciplinario.Gravedad.LEVE);
+            long partesLeves = parteRepository.countByAlumnoIdAndGravedadAndEstadoComputoAndActivoTrue(alumno.getId(), ParteDisciplinario.Gravedad.LEVE, ParteDisciplinario.EstadoComputo.ACTIVO);
             if (partesLeves >= 3) {
-                boolean tieneAvisoPendiente = avisoJefaturaRepository.findByLeidoFalseAndActivoTrueOrderByFechaCreacionDesc()
+                var avisoPendienteOpt = avisoJefaturaRepository.findByLeidoFalseAndActivoTrueOrderByFechaCreacionDesc()
                         .stream()
-                        .anyMatch(a -> a.getAlumno().getId().equals(alumno.getId()));
+                        .filter(a -> a.getAlumno().getId().equals(alumno.getId()))
+                        .findFirst();
                 
-                if (!tieneAvisoPendiente) {
+                if (avisoPendienteOpt.isPresent()) {
+                    AvisoJefatura aviso = avisoPendienteOpt.get();
+                    aviso.setMensaje("El alumno " + alumno.getNombre() + " " + alumno.getApellidos() + " ha acumulado " + partesLeves + " partes leves.");
+                    avisoJefaturaRepository.save(aviso);
+                } else {
                     AvisoJefatura aviso = new AvisoJefatura();
                     aviso.setAlumno(alumno);
                     aviso.setMensaje("El alumno " + alumno.getNombre() + " " + alumno.getApellidos() + " ha acumulado " + partesLeves + " partes leves.");

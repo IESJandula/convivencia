@@ -52,7 +52,7 @@ public class AvisoJefaturaController {
         int creados = 0;
         
         var agrupadosPorAlumno = activos.stream()
-                .filter(p -> p.getGravedad() == ParteDisciplinario.Gravedad.LEVE)
+                .filter(p -> p.getGravedad() == ParteDisciplinario.Gravedad.LEVE && p.getEstadoComputo() == ParteDisciplinario.EstadoComputo.ACTIVO)
                 .collect(Collectors.groupingBy(p -> p.getAlumno()));
 
         for (var entry : agrupadosPorAlumno.entrySet()) {
