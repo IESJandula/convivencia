@@ -27,9 +27,9 @@
       {{ mensaje }}
     </div>
 
-    <div v-if="tareas.length" class="task-grid">
+    <div v-if="activeTab === 'pendientes' && tareasPendientes.length" class="task-grid">
       <article
-        v-for="tarea in tareas"
+        v-for="tarea in tareasPendientes"
         :key="tarea.id"
         :class="['task-card', tarea.estado === 'COMPLETADA' ? 'task-card-ok' : 'task-card-pending']"
       >
@@ -75,6 +75,63 @@
           >
             {{ cargandoId === tarea.id ? 'Enviando...' : (tarea.estado === 'COMPLETADA' ? (esModoEdicion(tarea.id) ? 'Guardar cambios' : 'Enviadas') : 'Enviar tareas') }}
           </button>
+        </div>
+      </article>
+    </div>
+
+    <div v-if="activeTab === 'pendientes' && totalPages > 1" class="pagination">
+      <button class="pagination-btn" :disabled="page === 0" @click="cambiarPagina(-1)">Anterior</button>
+      <span class="pagination-info">Pagina {{ page + 1 }} de {{ totalPages }}</span>
+      <button class="pagination-btn" :disabled="page >= totalPages - 1" @click="cambiarPagina(1)">Siguiente</button>
+    </div>
+
+    <p v-else-if="activeTab === 'pendientes'" class="sin-datos">No tienes tareas de expulsión pendientes.</p>
+
+    <div v-if="activeTab === 'enviadas' && tareasCompletadasList.length" class="task-grid sent-grid">
+      <article
+        v-for="tarea in tareasCompletadasList"
+        :key="tarea.id"
+        :class="['task-card', 'task-card-ok']"
+      >
+        <div class="task-head">
+          <div>
+            <h3>
+              <button class="alumno-link" @click="abrirDetalleAlumno(tarea)">
+                {{ tarea.alumnoNombreCompleto }}
+              </button>
+            </h3>
+            <p class="asignatura">{{ tarea.asignatura }}</p>
+          </div>
+          <span class="pill pill-ok">Completada</span>
+        </div>
+
+        <div class="meta-row">
+          <div class="meta-item">
+            <span class="meta-label">Desde</span>
+            <strong>{{ formatearFecha(tarea.fechaInicioExpulsion) }}</strong>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Hasta</span>
+            <strong>{{ formatearFecha(tarea.fechaFinExpulsion) }}</strong>
+          </div>
+        </div>
+
+        <label class="editor-label">Tarea enviada</label>
+        <textarea
+          v-model="ediciones[tarea.id]"
+          class="input-tarea"
+          :disabled="tarea.estado === 'COMPLETADA' && !esModoEdicion(tarea.id)"
+          rows="4"
+        ></textarea>
+
+        <div class="card-actions">
+          <button
+            class="btn-enviar"
+            :disabled="(tarea.estado === 'COMPLETADA' && !esModoEdicion(tarea.id)) || cargandoId === tarea.id"
+            @click="guardarTarea(tarea.id)"
+          >
+            {{ cargandoId === tarea.id ? 'Enviando...' : (tarea.estado === 'COMPLETADA' ? (esModoEdicion(tarea.id) ? 'Guardar cambios' : 'Enviadas') : 'Enviar tareas') }}
+          </button>
           <button
             class="btn-modificar"
             :disabled="cargandoId === tarea.id"
@@ -86,13 +143,7 @@
       </article>
     </div>
 
-    <div v-if="totalPages > 1" class="pagination">
-      <button class="pagination-btn" :disabled="page === 0" @click="cambiarPagina(-1)">Anterior</button>
-      <span class="pagination-info">Pagina {{ page + 1 }} de {{ totalPages }}</span>
-      <button class="pagination-btn" :disabled="page >= totalPages - 1" @click="cambiarPagina(1)">Siguiente</button>
-    </div>
-
-    <p v-else class="sin-datos">No tienes tareas de expulsión asignadas.</p>
+    <p v-else-if="activeTab === 'enviadas'" class="sin-datos">No tienes tareas enviadas.</p>
 
     <div v-if="modalAlumno" class="modal-overlay" @click="cerrarDetalleAlumno">
       <div class="modal-detalle" @click.stop>
@@ -148,6 +199,7 @@ export default {
       toastTimer: null,
       cargandoId: null,
       modalAlumno: null,
+      activeTab: 'pendientes',
       page: 0,
       size: 30,
       totalElements: 0,
@@ -158,6 +210,12 @@ export default {
     }
   },
   computed: {
+    tareasPendientes() {
+      return this.tareas.filter(t => t.estado !== 'COMPLETADA')
+    },
+    tareasCompletadasList() {
+      return this.tareas.filter(t => t.estado === 'COMPLETADA')
+    },
     pendientes() {
       if (this.resumenPendientes !== null) {
         return this.resumenPendientes
@@ -175,10 +233,20 @@ export default {
     const profesor = JSON.parse(localStorage.getItem('profesor') || 'null')
     this.profesorEmail = profesor?.email || ''
     this.profesorNombre = profesor?.nombre || ''
+    this.sincronizarTabDesdeRuta()
     this.cargarTareas()
     this.cargarResumen()
   },
+  watch: {
+    '$route.query.tab'() {
+      this.sincronizarTabDesdeRuta()
+    }
+  },
   methods: {
+    sincronizarTabDesdeRuta() {
+      const tab = this.$route?.query?.tab
+      this.activeTab = tab === 'enviadas' ? 'enviadas' : 'pendientes'
+    },
     cambiarPagina(delta) {
       const nuevaPagina = this.page + delta
       if (nuevaPagina < 0 || nuevaPagina >= this.totalPages) {
@@ -409,6 +477,7 @@ h2 {
   display: flex;
   gap: 0.6rem;
 }
+
 
 .stat-chip {
   min-width: 120px;
@@ -656,6 +725,10 @@ h2 {
   background: #f8fafc;
   border: 1px dashed #cbd5e1;
   border-radius: 10px;
+}
+
+.sent-grid {
+  margin-top: 0.75rem;
 }
 
 .modal-overlay {

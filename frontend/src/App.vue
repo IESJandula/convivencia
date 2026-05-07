@@ -61,9 +61,24 @@
       <div class="nav-links">
         <router-link to="/nuevo" class="nav-button">📝 Nuevo Parte</router-link>
         <router-link v-if="rolUsuario === 'PROFESOR'" to="/aula-convivencia" class="nav-button">🏫 Aula Convivencia</router-link>
-        <router-link v-if="rolUsuario === 'PROFESOR'" to="/tareas-expulsion" class="nav-button nav-with-indicator">
+        <router-link
+          v-if="rolUsuario === 'PROFESOR'"
+          to="/tareas-expulsion"
+          active-class=""
+          exact-active-class=""
+          :class="['nav-button', 'nav-with-indicator', isTareasExpulsionNavActive ? 'nav-forced-active' : 'nav-force-inactive']"
+        >
           📚 Tareas Expulsión
           <span v-if="tareasPendientes > 0" class="pending-dot" :title="`Tienes ${tareasPendientes} tarea(s) pendiente(s)`"></span>
+        </router-link>
+        <router-link
+          v-if="rolUsuario === 'PROFESOR'"
+          to="/tareas-expulsion?tab=enviadas"
+          active-class=""
+          exact-active-class=""
+          :class="['nav-button', isTareasEnviadasNavActive ? 'nav-forced-active' : 'nav-force-inactive']"
+        >
+          📤 Tareas Enviadas
         </router-link>
         <router-link v-if="rolUsuario === 'JEFATURA'" to="/validar-sanciones" class="nav-button">⚖️ Validar Sanciones</router-link>
         <router-link v-if="rolUsuario === 'JEFATURA'" to="/expulsiones" class="nav-button">📄 Expulsiones</router-link>
@@ -117,6 +132,13 @@ export default {
     },
     esRutaExpulsiones() {
       return this.$route.path === '/expulsiones'
+    }
+    ,
+    isTareasEnviadasNavActive() {
+      return this.$route.path === '/tareas-expulsion' && this.$route.query.tab === 'enviadas'
+    },
+    isTareasExpulsionNavActive() {
+      return this.$route.path === '/tareas-expulsion' && this.$route.query.tab !== 'enviadas'
     }
   },
   mounted() {
@@ -461,6 +483,26 @@ export default {
 }
 .nav-button.router-link-active { background: white !important; color: #1a3a5a !important; font-weight: bold; }
 .nav-button.router-link-active::after { transform: scaleX(0); }
+
+.nav-button.nav-force-inactive.router-link-active {
+  background: rgba(255,255,255,0.14) !important;
+  color: rgba(255,255,255,0.82) !important;
+  font-weight: normal !important;
+}
+
+.nav-button.nav-force-inactive.router-link-active::after {
+  transform: scaleX(0);
+}
+
+.nav-button.nav-forced-active {
+  background: white !important;
+  color: #1a3a5a !important;
+  font-weight: bold;
+}
+
+.nav-button.nav-forced-active::after {
+  transform: scaleX(0);
+}
 .container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
 .container.container-wide-aula { max-width: 1320px; padding: 0 1rem; }
 .container.container-wide-expulsiones { max-width: 1240px; padding: 0 1rem; }
