@@ -4,10 +4,15 @@ import com.iesjandula.convivencia.dto.ParteAulaConvivenciaDto;
 import com.iesjandula.convivencia.dto.ParteRequestDto;
 import com.iesjandula.convivencia.entity.*;
 import com.iesjandula.convivencia.repository.*;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -98,6 +103,88 @@ public class ParteService {
 
     public List<ParteDisciplinario> listarTodos() {
         return parteRepository.findByActivoTrue();
+    }
+
+    public Page<ParteDisciplinario> listarHistorialPaginado(String profesorEmail,
+                                                            LocalDate fechaDesde,
+                                                            LocalDate fechaHasta,
+                                                            String alumnoTexto,
+                                                            String profesorTexto,
+                                                            String gravedad,
+                                                            String conductaTexto,
+                                                            String estadoComputo,
+                                                            Integer alumnoId,
+                                                            Pageable pageable) {
+        Specification<ParteDisciplinario> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.isTrue(root.get("activo")));
+
+            if (profesorEmail != null && !profesorEmail.isBlank()) {
+                predicates.add(cb.equal(cb.lower(root.get("profesor").get("email")), profesorEmail.toLowerCase()));
+            }
+
+            if (alumnoId != null) {
+                predicates.add(cb.equal(root.get("alumno").get("id"), alumnoId));
+            }
+
+            if (fechaDesde != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("fecha"), fechaDesde));
+            }
+
+            if (fechaHasta != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("fecha"), fechaHasta));
+            }
+
+            if (alumnoTexto != null && !alumnoTexto.isBlank()) {
+                String pattern = "%" + alumnoTexto.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("alumno").get("nombre")), pattern),
+                        cb.like(cb.lower(root.get("alumno").get("apellidos")), pattern),
+                        cb.like(cb.lower(root.get("alumno").get("curso")), pattern),
+                        cb.like(cb.lower(root.get("alumno").get("grupo")), pattern)
+                ));
+            }
+
+            if (profesorTexto != null && !profesorTexto.isBlank()) {
+                String pattern = "%" + profesorTexto.toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("profesor").get("nombre")), pattern));
+            }
+
+            if (gravedad != null && !gravedad.isBlank()) {
+                try {
+                    ParteDisciplinario.Gravedad gravedadEnum = ParteDisciplinario.Gravedad.valueOf(gravedad);
+                    predicates.add(cb.equal(root.get("gravedad"), gravedadEnum));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+
+            if (conductaTexto != null && !conductaTexto.isBlank()) {
+                String pattern = "%" + conductaTexto.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("conducta").get("codigo")), pattern),
+                        cb.like(cb.lower(root.get("conducta").get("descripcion")), pattern)
+                ));
+            }
+
+            if (estadoComputo != null && !estadoComputo.isBlank()) {
+                if ("COMPUTADO".equalsIgnoreCase(estadoComputo)) {
+                    predicates.add(cb.equal(root.get("estadoComputo"), ParteDisciplinario.EstadoComputo.COMPUTADO));
+                } else if ("PENDIENTE".equalsIgnoreCase(estadoComputo)) {
+                    predicates.add(cb.equal(root.get("estadoComputo"), ParteDisciplinario.EstadoComputo.ACTIVO));
+                } else {
+                    try {
+                        ParteDisciplinario.EstadoComputo estadoEnum = ParteDisciplinario.EstadoComputo.valueOf(estadoComputo);
+                        predicates.add(cb.equal(root.get("estadoComputo"), estadoEnum));
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        return parteRepository.findAll(spec, pageable);
     }
 
     public ParteDisciplinario obtenerPorId(Integer id) {

@@ -3,8 +3,12 @@ package com.iesjandula.convivencia.controller;
 import com.iesjandula.convivencia.dto.CrearExpulsionRequestDto;
 import com.iesjandula.convivencia.dto.CrearExpulsionResponseDto;
 import com.iesjandula.convivencia.dto.ExpulsionPdfItemDto;
+import com.iesjandula.convivencia.dto.PageResponse;
 import com.iesjandula.convivencia.entity.ParteDisciplinario;
 import com.iesjandula.convivencia.service.ExpulsionService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -62,7 +66,12 @@ public class ExpulsionController {
     }
 
     @GetMapping("/pendientes-pdf")
-    public ResponseEntity<List<ExpulsionPdfItemDto>> listarPendientesPdf() {
-        return ResponseEntity.ok(expulsionService.listarExpulsionesParaPdf());
+    public ResponseEntity<PageResponse<ExpulsionPdfItemDto>> listarPendientesPdf(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.desc("id")));
+        Page<ExpulsionPdfItemDto> resultado = expulsionService.listarExpulsionesParaPdfPaginado(pageable);
+        return ResponseEntity.ok(PageResponse.from(resultado));
     }
 }

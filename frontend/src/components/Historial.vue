@@ -10,7 +10,7 @@
       <div class="resumen-grid">
         <article class="metric-card principal">
           <span class="metric-label">Total registros</span>
-          <strong class="metric-value">{{ partes.length }}</strong>
+          <strong class="metric-value">{{ totalElements }}</strong>
           <small>Partes en la vista actual</small>
         </article>
 
@@ -125,6 +125,12 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div v-if="totalPages > 1" class="pagination">
+        <button class="pagination-btn" :disabled="page === 0" @click="cambiarPagina(-1)">Anterior</button>
+        <span class="pagination-info">Pagina {{ page + 1 }} de {{ totalPages }}</span>
+        <button class="pagination-btn" :disabled="page >= totalPages - 1" @click="cambiarPagina(1)">Siguiente</button>
       </div>
     </div>
 
@@ -262,53 +268,17 @@ export default {
       filtroEstadoComputo: '',
       emailSesion: '',
       rolUsuario: 'PROFESOR',
-      parteSeleccionado: null
+      parteSeleccionado: null,
+      page: 0,
+      size: 20,
+      totalElements: 0,
+      totalPages: 0,
+      cargaTimer: null
     }
   },
   computed: {
     partes() {
-      return this.partesOriginales.filter(parte => {
-        // 1. Rango de Fechas
-        if (!this.coincideConRangoFechas(parte.fecha)) return false
-        
-        // 2. Alumno (por ID si viene en la query)
-        const alumnoIdQuery = this.$route.query.alumno_id
-        if (alumnoIdQuery && parte.alumno.id !== parseInt(alumnoIdQuery)) return false
-        
-        // 3. Alumno (por texto: nombre, apellidos, grupo)
-        if (this.filtroTextoAlumno) {
-          const texto = this.quitarTildes(this.filtroTextoAlumno.toLowerCase())
-          const nombreCompleto = this.quitarTildes(`${parte.alumno.nombre} ${parte.alumno.apellidos}`.toLowerCase())
-          const grupo = this.quitarTildes(`${parte.alumno.curso} ${parte.alumno.grupo || ''}`.toLowerCase())
-          if (!nombreCompleto.includes(texto) && !grupo.includes(texto)) return false
-        }
-        
-        // 4. Profesor
-        if (this.filtroProfesor && !this.esVistaProfesor) {
-          const profFiltro = this.quitarTildes(this.filtroProfesor.toLowerCase())
-          const profNombre = this.quitarTildes(parte.profesor.nombre.toLowerCase())
-          if (!profNombre.includes(profFiltro)) return false
-        }
-        
-        // 5. Gravedad
-        if (this.filtroGravedad && parte.gravedad !== this.filtroGravedad) return false
-        
-        // 6. Conducta
-        if (this.filtroConducta) {
-          const condFiltro = this.quitarTildes(this.filtroConducta.toLowerCase())
-          const conducta = this.quitarTildes(`${parte.conducta.codigo} ${parte.conducta.descripcion}`.toLowerCase())
-          if (!conducta.includes(condFiltro)) return false
-        }
-        
-        // 7. Estado de Cómputo
-        if (this.filtroEstadoComputo) {
-          const estaComp = this.estaComputado(parte)
-          if (this.filtroEstadoComputo === 'COMPUTADO' && !estaComp) return false
-          if (this.filtroEstadoComputo === 'PENDIENTE' && estaComp) return false
-        }
-        
-        return true
-      })
+      return this.partesOriginales
     },
     esVistaProfesor() {
       return this.rolUsuario === 'PROFESOR' && Boolean(this.emailSesion)
@@ -333,6 +303,38 @@ export default {
   mounted() {
     this.inicializarContextoUsuario()
     this.cargarPartes()
+  },
+  beforeUnmount() {
+    if (this.cargaTimer) {
+      clearTimeout(this.cargaTimer)
+      this.cargaTimer = null
+    }
+  },
+  watch: {
+    filtroFechaDesde() {
+      this.programarCarga()
+    },
+    filtroFechaHasta() {
+      this.programarCarga()
+    },
+    filtroTextoAlumno() {
+      this.programarCarga()
+    },
+    filtroProfesor() {
+      this.programarCarga()
+    },
+    filtroGravedad() {
+      this.programarCarga()
+    },
+    filtroConducta() {
+      this.programarCarga()
+    },
+    filtroEstadoComputo() {
+      this.programarCarga()
+    },
+    '$route.query.alumno_id'() {
+      this.programarCarga()
+    }
   },
   methods: {
     quitarTildes(texto) {
@@ -382,21 +384,69 @@ export default {
       )
     },
 
-    async cargarPartes() {
+    programarCarga() {
+      if (this.cargaTimer) {
+        clearTimeout(this.cargaTimer)
+      }
+      this.cargaTimer = setTimeout(() => {
+        this.cargaTimer = null
+        this.page = 0
+        this.cargarPartes()
+      }, 350)
+    },
+
+    cambiarPagina(delta) {
+      const nuevaPagina = this.page + delta
+      if (nuevaPagina < 0 || nuevaPagina >= this.totalPages) {
+        return
+      }
+      this.page = nuevaPagina
+      this.cargarPartes(true)
+    },
+
+    construirParams() {
+      return {
+        page: this.page,
+        size: this.size,
+        fechaDesde: this.filtroFechaDesde || null,
+        fechaHasta: this.filtroFechaHasta || null,
+        alumnoTexto: this.filtroTextoAlumno || null,
+        profesorTexto: this.esVistaProfesor ? null : (this.filtroProfesor || null),
+        gravedad: this.filtroGravedad || null,
+        conductaTexto: this.filtroConducta || null,
+        estadoComputo: this.filtroEstadoComputo || null,
+        alumnoId: this.$route.query.alumno_id || null
+      }
+    },
+
+    async cargarPartes(preservarPagina = false) {
       try {
         let datos = []
+        const params = this.construirParams()
+        if (!preservarPagina) {
+          this.page = 0
+          params.page = 0
+        }
         if (this.esVistaProfesor) {
-          const response = await axios.get(`${API_URL}/partes/profesor/${this.emailSesion}`)
-          datos = Array.isArray(response.data) ? response.data : []
+          const response = await axios.get(`${API_URL}/partes/profesor/${this.emailSesion}`, { params })
+          const payload = response.data || {}
+          datos = Array.isArray(payload.content) ? payload.content : (Array.isArray(payload) ? payload : [])
+          this.totalElements = Number(payload.totalElements || datos.length)
+          this.totalPages = Number(payload.totalPages || 1)
         } else {
-          const response = await axios.get(`${API_URL}/partes`)
-          datos = Array.isArray(response.data) ? response.data : []
+          const response = await axios.get(`${API_URL}/partes`, { params })
+          const payload = response.data || {}
+          datos = Array.isArray(payload.content) ? payload.content : (Array.isArray(payload) ? payload : [])
+          this.totalElements = Number(payload.totalElements || datos.length)
+          this.totalPages = Number(payload.totalPages || 1)
         }
         
         this.partesOriginales = datos
-        console.log('Partes cargados:', this.partesOriginales)
       } catch (error) {
         console.error('Error al cargar partes:', error)
+        this.partesOriginales = []
+        this.totalElements = 0
+        this.totalPages = 0
       }
     },
     
@@ -408,10 +458,14 @@ export default {
       this.filtroGravedad = ''
       this.filtroConducta = ''
       this.filtroEstadoComputo = ''
+      this.page = 0
+      this.cargarPartes()
     },
     
     limpiarFiltroAlumno() {
       this.$router.push('/historial')
+      this.page = 0
+      this.cargarPartes()
     },
     
     async verDetalle(parte) {
@@ -795,6 +849,34 @@ tbody tr:last-child td {
 
 .sin-datos h3 {
   margin: 0 0 0.35rem;
+  color: #2d4b66;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+}
+
+.pagination-btn {
+  background: #0f4c5c;
+  color: #ffffff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-weight: 700;
   color: #2d4b66;
 }
 

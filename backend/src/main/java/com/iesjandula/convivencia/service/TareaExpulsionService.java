@@ -3,6 +3,8 @@ package com.iesjandula.convivencia.service;
 import com.iesjandula.convivencia.dto.TareaExpulsionDto;
 import com.iesjandula.convivencia.entity.TareaExpulsion;
 import com.iesjandula.convivencia.repository.TareaExpulsionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,19 @@ public class TareaExpulsionService {
                         .thenComparing(TareaExpulsion::getId, Comparator.reverseOrder()))
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    public Page<TareaExpulsionDto> listarPorProfesorPaginado(String profesorEmail, Pageable pageable) {
+        return tareaExpulsionRepository.findByProfesorEmail(profesorEmail, pageable)
+                .map(this::toDto);
+    }
+
+    public long contarPorProfesor(String profesorEmail) {
+        return tareaExpulsionRepository.countByProfesorEmail(profesorEmail);
+    }
+
+    public long contarPorProfesorYEstado(String profesorEmail, TareaExpulsion.Estado estado) {
+        return tareaExpulsionRepository.countByProfesorEmailAndEstado(profesorEmail, estado);
     }
 
     public List<TareaExpulsionDto> listarPorExpulsion(Integer expulsionId) {

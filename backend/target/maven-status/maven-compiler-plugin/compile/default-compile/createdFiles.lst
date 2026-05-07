@@ -26,7 +26,6 @@ com\iesjandula\convivencia\entity\Grupo.class
 com\iesjandula\convivencia\dto\AsignarTutorGrupoDto.class
 com\iesjandula\convivencia\entity\ParteExpulsion.class
 com\iesjandula\convivencia\entity\ParteDisciplinario$Gravedad.class
-com\iesjandula\convivencia\service\ParteService.class
 com\iesjandula\convivencia\dto\ExpulsionPdfItemDto.class
 com\iesjandula\convivencia\dto\AlumnoDto.class
 com\iesjandula\convivencia\service\TareaExpulsionService.class

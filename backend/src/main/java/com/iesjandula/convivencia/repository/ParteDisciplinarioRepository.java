@@ -4,7 +4,10 @@ import com.iesjandula.convivencia.entity.ParteDisciplinario;
 import com.iesjandula.convivencia.entity.ParteDisciplinario.Estado;
 import com.iesjandula.convivencia.entity.ParteDisciplinario.EstadoComputo;
 import com.iesjandula.convivencia.entity.ParteDisciplinario.MedidaTomada;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,12 +15,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface ParteDisciplinarioRepository extends JpaRepository<ParteDisciplinario, Integer> {
+public interface ParteDisciplinarioRepository extends JpaRepository<ParteDisciplinario, Integer>, JpaSpecificationExecutor<ParteDisciplinario> {
     List<ParteDisciplinario> findByAlumnoIdAndActivoTrue(Integer alumnoId);
     List<ParteDisciplinario> findByProfesorEmailAndActivoTrue(String profesorEmail);
     List<ParteDisciplinario> findByEstadoAndActivoTrue(Estado estado);
     List<ParteDisciplinario> findByFechaAndActivoTrue(LocalDate fecha);
     List<ParteDisciplinario> findByActivoTrue();
+    Page<ParteDisciplinario> findByActivoTrue(Pageable pageable);
+    Page<ParteDisciplinario> findByProfesorEmailAndActivoTrue(String profesorEmail, Pageable pageable);
     List<ParteDisciplinario> findByAlumnoCursoAndAlumnoGrupoAndActivoTrueOrderByFechaDesc(String curso, String grupo);
 
     long countByAlumnoIdAndGravedadAndActivoTrue(Integer alumnoId, ParteDisciplinario.Gravedad gravedad);

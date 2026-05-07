@@ -1,8 +1,12 @@
 package com.iesjandula.convivencia.controller;
 
 import com.iesjandula.convivencia.dto.ActualizarTareaExpulsionRequestDto;
+import com.iesjandula.convivencia.dto.PageResponse;
 import com.iesjandula.convivencia.dto.TareaExpulsionDto;
 import com.iesjandula.convivencia.service.TareaExpulsionService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +25,26 @@ public class TareaExpulsionController {
     }
 
     @GetMapping("/profesor/{email}")
-    public ResponseEntity<List<TareaExpulsionDto>> listarPorProfesor(@PathVariable String email) {
-        return ResponseEntity.ok(tareaExpulsionService.listarPorProfesor(email));
+    public ResponseEntity<PageResponse<TareaExpulsionDto>> listarPorProfesor(
+            @PathVariable String email,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "30") int size
+    ) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.asc("estado"), Sort.Order.desc("id")));
+        Page<TareaExpulsionDto> resultado = tareaExpulsionService.listarPorProfesorPaginado(email, pageable);
+        return ResponseEntity.ok(PageResponse.from(resultado));
+    }
+
+    @GetMapping("/profesor/{email}/resumen")
+    public ResponseEntity<Map<String, Long>> resumenPorProfesor(@PathVariable String email) {
+        long pendientes = tareaExpulsionService.contarPorProfesorYEstado(email, com.iesjandula.convivencia.entity.TareaExpulsion.Estado.PENDIENTE);
+        long completadas = tareaExpulsionService.contarPorProfesorYEstado(email, com.iesjandula.convivencia.entity.TareaExpulsion.Estado.COMPLETADA);
+        long total = tareaExpulsionService.contarPorProfesor(email);
+        return ResponseEntity.ok(Map.of(
+                "pendientes", pendientes,
+                "completadas", completadas,
+                "total", total
+        ));
     }
 
     @GetMapping("/expulsion/{expulsionId}")

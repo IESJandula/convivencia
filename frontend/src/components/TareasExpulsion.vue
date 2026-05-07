@@ -86,6 +86,12 @@
       </article>
     </div>
 
+    <div v-if="totalPages > 1" class="pagination">
+      <button class="pagination-btn" :disabled="page === 0" @click="cambiarPagina(-1)">Anterior</button>
+      <span class="pagination-info">Pagina {{ page + 1 }} de {{ totalPages }}</span>
+      <button class="pagination-btn" :disabled="page >= totalPages - 1" @click="cambiarPagina(1)">Siguiente</button>
+    </div>
+
     <p v-else class="sin-datos">No tienes tareas de expulsión asignadas.</p>
 
     <div v-if="modalAlumno" class="modal-overlay" @click="cerrarDetalleAlumno">
@@ -141,14 +147,27 @@ export default {
       toastTipo: 'success',
       toastTimer: null,
       cargandoId: null,
-      modalAlumno: null
+      modalAlumno: null,
+      page: 0,
+      size: 30,
+      totalElements: 0,
+      totalPages: 0,
+      resumenPendientes: null,
+      resumenCompletadas: null,
+      resumenTotal: null
     }
   },
   computed: {
     pendientes() {
+      if (this.resumenPendientes !== null) {
+        return this.resumenPendientes
+      }
       return this.tareas.filter(t => t.estado !== 'COMPLETADA').length
     },
     completadas() {
+      if (this.resumenCompletadas !== null) {
+        return this.resumenCompletadas
+      }
       return this.tareas.filter(t => t.estado === 'COMPLETADA').length
     }
   },
@@ -157,13 +176,47 @@ export default {
     this.profesorEmail = profesor?.email || ''
     this.profesorNombre = profesor?.nombre || ''
     this.cargarTareas()
+    this.cargarResumen()
   },
   methods: {
-    async cargarTareas() {
+    cambiarPagina(delta) {
+      const nuevaPagina = this.page + delta
+      if (nuevaPagina < 0 || nuevaPagina >= this.totalPages) {
+        return
+      }
+      this.page = nuevaPagina
+      this.cargarTareas(true)
+    },
+    async cargarResumen() {
       if (!this.profesorEmail) return
       try {
-        const { data } = await axios.get(`${API_URL}/tareas-expulsion/profesor/${this.profesorEmail}`)
-        this.tareas = data || []
+        const { data } = await axios.get(`${API_URL}/tareas-expulsion/profesor/${this.profesorEmail}/resumen`)
+        this.resumenPendientes = Number(data?.pendientes ?? 0)
+        this.resumenCompletadas = Number(data?.completadas ?? 0)
+        this.resumenTotal = Number(data?.total ?? 0)
+        this.emitirPendientes()
+      } catch {
+        this.resumenPendientes = null
+        this.resumenCompletadas = null
+        this.resumenTotal = null
+      }
+    },
+    async cargarTareas(preservarPagina = false) {
+      if (!this.profesorEmail) return
+      try {
+        const params = {
+          page: this.page,
+          size: this.size
+        }
+        if (!preservarPagina) {
+          this.page = 0
+          params.page = 0
+        }
+        const { data } = await axios.get(`${API_URL}/tareas-expulsion/profesor/${this.profesorEmail}`, { params })
+        const payload = data || {}
+        this.tareas = Array.isArray(payload.content) ? payload.content : (Array.isArray(payload) ? payload : [])
+        this.totalElements = Number(payload.totalElements || this.tareas.length)
+        this.totalPages = Number(payload.totalPages || 1)
         this.ediciones = Object.fromEntries(
           this.tareas.map(t => [t.id, this.normalizarDescripcionParaEdicion(t.descripcionTarea)])
         )
@@ -171,6 +224,8 @@ export default {
         this.emitirPendientes()
       } catch (error) {
         this.tareas = []
+        this.totalElements = 0
+        this.totalPages = 0
         const status = error?.response?.status
         const detalle = error?.response?.data?.error || error?.response?.data?.message
         this.mensaje = status
@@ -193,7 +248,7 @@ export default {
         this.mensaje = ''
         this.mensajeTipo = 'success'
         this.mostrarToast('Tareas enviadas con exito', 'success')
-        await this.cargarTareas()
+        await Promise.all([this.cargarTareas(true), this.cargarResumen()])
       } catch (error) {
         this.mensaje = error?.response?.data?.error || 'No se pudo actualizar la tarea.'
         this.mensajeTipo = 'error'
@@ -234,16 +289,30 @@ export default {
         }
       }
     },
-    abrirDetalleAlumno(tarea) {
-      const tareasAlumno = this.tareas
-        .filter(item => item.expulsionId === tarea.expulsionId)
-        .sort((a, b) => (a.asignatura || '').localeCompare(b.asignatura || ''))
+    async abrirDetalleAlumno(tarea) {
+      if (!tarea?.expulsionId) {
+        return
+      }
 
       this.modalAlumno = {
         alumnoNombreCompleto: tarea.alumnoNombreCompleto,
         fechaInicioExpulsion: tarea.fechaInicioExpulsion,
         fechaFinExpulsion: tarea.fechaFinExpulsion,
-        tareas: tareasAlumno
+        tareas: []
+      }
+
+      try {
+        const { data } = await axios.get(`${API_URL}/tareas-expulsion/expulsion/${tarea.expulsionId}`)
+        const tareasAlumno = Array.isArray(data) ? data : []
+        this.modalAlumno = {
+          ...this.modalAlumno,
+          tareas: tareasAlumno.sort((a, b) => (a.asignatura || '').localeCompare(b.asignatura || ''))
+        }
+      } catch {
+        this.modalAlumno = {
+          ...this.modalAlumno,
+          tareas: []
+        }
       }
     },
     cerrarDetalleAlumno() {
@@ -261,8 +330,11 @@ export default {
       }, 3000)
     },
     emitirPendientes() {
+      const count = this.resumenPendientes !== null
+        ? this.resumenPendientes
+        : this.pendientes
       window.dispatchEvent(new CustomEvent('tareas-expulsion-pendientes', {
-        detail: { count: this.pendientes }
+        detail: { count }
       }))
     }
   },
@@ -675,6 +747,34 @@ h2 {
 .modal-tarea-item p {
   margin: 0.25rem 0 0;
   color: #334155;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+}
+
+.pagination-btn {
+  background: #0f766e;
+  color: #ffffff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-weight: 700;
+  color: #1e293b;
 }
 
 @media (max-width: 900px) {

@@ -206,9 +206,8 @@ export default {
       }
 
       try {
-        const { data } = await axios.get(`${API_URL}/tareas-expulsion/profesor/${this.profesorEmail}`)
-        const tareas = Array.isArray(data) ? data : []
-        this.tareasPendientes = tareas.filter(t => t.estado !== 'COMPLETADA').length
+        const { data } = await axios.get(`${API_URL}/tareas-expulsion/profesor/${this.profesorEmail}/resumen`)
+        this.tareasPendientes = Number(data?.pendientes ?? 0)
       } catch (e) {
         this.tareasPendientes = 0
       }

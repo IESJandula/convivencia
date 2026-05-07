@@ -2,8 +2,12 @@ package com.iesjandula.convivencia.controller;
 
 import com.iesjandula.convivencia.dto.ParteAulaConvivenciaDto;
 import com.iesjandula.convivencia.dto.ParteRequestDto;
+import com.iesjandula.convivencia.dto.PageResponse;
 import com.iesjandula.convivencia.entity.ParteDisciplinario;
 import com.iesjandula.convivencia.service.ParteService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,8 +32,32 @@ public class ParteController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ParteDisciplinario>> listarTodos() {
-        return ResponseEntity.ok(parteService.listarTodos());
+    public ResponseEntity<PageResponse<ParteDisciplinario>> listarTodos(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(required = false) String alumnoTexto,
+            @RequestParam(required = false) String profesorTexto,
+            @RequestParam(required = false) String gravedad,
+            @RequestParam(required = false) String conductaTexto,
+            @RequestParam(required = false) String estadoComputo,
+            @RequestParam(required = false) Integer alumnoId
+    ) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fecha"), Sort.Order.desc("id")));
+        Page<ParteDisciplinario> resultado = parteService.listarHistorialPaginado(
+                null,
+                fechaDesde,
+                fechaHasta,
+                alumnoTexto,
+                profesorTexto,
+                gravedad,
+                conductaTexto,
+                estadoComputo,
+                alumnoId,
+                pageable
+        );
+        return ResponseEntity.ok(PageResponse.from(resultado));
     }
 
     @GetMapping("/{id}")
@@ -38,8 +66,33 @@ public class ParteController {
     }
 
     @GetMapping("/profesor/{email}")
-    public ResponseEntity<List<ParteDisciplinario>> listarPorProfesor(@PathVariable String email) {
-        return ResponseEntity.ok(parteService.listarPorProfesor(email));
+    public ResponseEntity<PageResponse<ParteDisciplinario>> listarPorProfesor(
+            @PathVariable String email,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(required = false) String alumnoTexto,
+            @RequestParam(required = false) String profesorTexto,
+            @RequestParam(required = false) String gravedad,
+            @RequestParam(required = false) String conductaTexto,
+            @RequestParam(required = false) String estadoComputo,
+            @RequestParam(required = false) Integer alumnoId
+    ) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fecha"), Sort.Order.desc("id")));
+        Page<ParteDisciplinario> resultado = parteService.listarHistorialPaginado(
+                email,
+                fechaDesde,
+                fechaHasta,
+                alumnoTexto,
+                profesorTexto,
+                gravedad,
+                conductaTexto,
+                estadoComputo,
+                alumnoId,
+                pageable
+        );
+        return ResponseEntity.ok(PageResponse.from(resultado));
     }
 
     @GetMapping("/fecha/{fecha}")

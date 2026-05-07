@@ -10,6 +10,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,6 +97,41 @@ public class ExpulsionService {
                 })
                 .collect(Collectors.toList());
     }
+
+            public Page<ExpulsionPdfItemDto> listarExpulsionesParaPdfPaginado(org.springframework.data.domain.Pageable pageable) {
+            return expulsionRepository.findByActivoTrue(pageable)
+                .map(expulsion -> {
+                    Alumno alumno = expulsion.getAlumno();
+                    String nombreCompleto = "";
+                    String curso = "";
+                    String grupo = "";
+
+                    if (alumno != null) {
+                    nombreCompleto = (Objects.requireNonNullElse(alumno.getNombre(), "") + " "
+                        + Objects.requireNonNullElse(alumno.getApellidos(), "")).trim();
+                    curso = Objects.requireNonNullElse(alumno.getCurso(), "");
+                    grupo = Objects.requireNonNullElse(alumno.getGrupo(), "");
+                    }
+
+                    List<TareaExpulsion> tareasExpulsion = tareaExpulsionRepository.findByExpulsionId(expulsion.getId());
+                    int tareasTotales = tareasExpulsion.size();
+                    int tareasCompletadas = (int) tareasExpulsion.stream()
+                        .filter(tarea -> tarea.getEstado() == TareaExpulsion.Estado.COMPLETADA)
+                        .filter(tarea -> esActividadProfesorValida(tarea.getDescripcionTarea()))
+                        .count();
+
+                    return new ExpulsionPdfItemDto(
+                        expulsion.getId(),
+                        alumno != null ? alumno.getId() : null,
+                        nombreCompleto,
+                        curso,
+                        grupo,
+                        puedeGenerarCartaExpulsion(expulsion.getId()),
+                        tareasCompletadas,
+                        tareasTotales
+                    );
+                });
+            }
 
     @Transactional
     public CrearExpulsionResponseDto crearExpulsion(CrearExpulsionRequestDto request) {

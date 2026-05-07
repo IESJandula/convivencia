@@ -20,7 +20,7 @@
       <div class="resumen-grid" v-if="esVistaExpulsiones">
         <article class="metric-card principal">
           <span class="metric-label">Expulsiones</span>
-          <strong class="metric-value">{{ expulsionesPdf.length }}</strong>
+          <strong class="metric-value">{{ totalExpulsiones }}</strong>
           <small>Total en listado</small>
         </article>
         <article class="metric-card">
@@ -103,6 +103,12 @@
           </tr>
         </tbody>
       </table>
+      </div>
+
+      <div v-if="totalPaginasExpulsiones > 1" class="pagination">
+        <button class="pagination-btn" :disabled="pageExpulsiones === 0" @click="cambiarPaginaExpulsiones(-1)">Anterior</button>
+        <span class="pagination-info">Pagina {{ pageExpulsiones + 1 }} de {{ totalPaginasExpulsiones }}</span>
+        <button class="pagination-btn" :disabled="pageExpulsiones >= totalPaginasExpulsiones - 1" @click="cambiarPaginaExpulsiones(1)">Siguiente</button>
       </div>
 
       <div v-if="modalExpulsion" class="modal-overlay" @click="cerrarDetalleExpulsion">
@@ -236,6 +242,10 @@ export default {
       expulsionesPdf: [],
       cargandoPdfId: null,
       cargandoExpulsionesPdf: false,
+      pageExpulsiones: 0,
+      sizeExpulsiones: 20,
+      totalExpulsiones: 0,
+      totalPaginasExpulsiones: 0,
       observadoresActivos: false,
       modalExpulsion: null
     }
@@ -312,7 +322,8 @@ export default {
           partes: this.partes,
           selectedPartes: this.selectedPartes,
           fechaInicio: this.fechaInicio,
-          fechaFin: this.fechaFin
+          fechaFin: this.fechaFin,
+          pageExpulsiones: this.pageExpulsiones
         }
         sessionStorage.setItem(JEFATURA_STATE_KEY, JSON.stringify(estado))
       } catch {
@@ -332,6 +343,9 @@ export default {
         this.selectedPartes = Array.isArray(estado.selectedPartes) ? estado.selectedPartes : this.selectedPartes
         this.fechaInicio = estado.fechaInicio || this.fechaInicio
         this.fechaFin = estado.fechaFin || this.fechaFin
+        if (Number.isInteger(estado.pageExpulsiones)) {
+          this.pageExpulsiones = estado.pageExpulsiones
+        }
       } catch {
       }
     },
@@ -371,8 +385,16 @@ export default {
         this.cargandoExpulsionesPdf = true
       }
       try {
-        const { data } = await axios.get(`${API_URL}/expulsiones/pendientes-pdf`)
-        this.expulsionesPdf = data || []
+        const { data } = await axios.get(`${API_URL}/expulsiones/pendientes-pdf`, {
+          params: {
+            page: this.pageExpulsiones,
+            size: this.sizeExpulsiones
+          }
+        })
+        const payload = data || {}
+        this.expulsionesPdf = Array.isArray(payload.content) ? payload.content : (Array.isArray(payload) ? payload : [])
+        this.totalExpulsiones = Number(payload.totalElements || this.expulsionesPdf.length)
+        this.totalPaginasExpulsiones = Number(payload.totalPages || 1)
         this.guardarEstadoVista()
       } catch {
         const maxReintentos = forzarRecuperacion ? 8 : 2
@@ -385,6 +407,14 @@ export default {
           this.cargandoExpulsionesPdf = false
         }
       }
+    },
+    cambiarPaginaExpulsiones(delta) {
+      const nuevaPagina = this.pageExpulsiones + delta
+      if (nuevaPagina < 0 || nuevaPagina >= this.totalPaginasExpulsiones) {
+        return
+      }
+      this.pageExpulsiones = nuevaPagina
+      this.cargarExpulsionesPdf()
     },
     async actualizarElegibilidadFilas() {
       if (!this.expulsionesPdf.length) {
@@ -487,8 +517,6 @@ export default {
       try {
         const parteReferencia = seleccionados[0]
         const alumnoNombreCompleto = `${parteReferencia?.alumno?.nombre || ''} ${parteReferencia?.alumno?.apellidos || ''}`.trim()
-        const cursoAlumno = parteReferencia?.alumno?.curso || ''
-        const grupoAlumno = parteReferencia?.alumno?.grupo || ''
 
         const payload = {
           alumnoId: alumnoIds[0],
@@ -498,29 +526,14 @@ export default {
           fechaFin: this.fechaFin
         }
 
-        const { data } = await axios.post(`${API_URL}/expulsiones`, payload)
-        const nuevaFila = {
-          expulsionId: data.expulsionId,
-          alumnoId: alumnoIds[0],
-          alumnoNombreCompleto,
-          curso: cursoAlumno,
-          grupo: grupoAlumno,
-          puedeGenerarPdf: false,
-          tareasCompletadas: 0,
-          tareasTotales: Number(data?.tareasPendientesGeneradas || 0)
-        }
-
-        this.expulsionesPdf = [
-          nuevaFila,
-          ...this.expulsionesPdf.filter(exp => exp.expulsionId !== data.expulsionId)
-        ]
-        this.guardarEstadoVista()
+        await axios.post(`${API_URL}/expulsiones`, payload)
 
         this.mensaje = ''
         this.mensajeTipo = 'success'
         this.mostrarToast(`Se ha expulsado al alumno ${alumnoNombreCompleto || 'seleccionado'} con exito.`, 'success')
         this.selectedPartes = []
         await this.cargarPartes()
+        this.pageExpulsiones = 0
         await this.actualizarListadoPdf()
       } catch (error) {
         this.mensaje = error?.response?.data?.error || 'Error al crear la expulsión.'
@@ -977,6 +990,34 @@ tbody tr:last-child td {
   justify-content: space-between;
   align-items: center;
   gap: 0.8rem;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+}
+
+.pagination-btn {
+  background: #0f4c5c;
+  color: #ffffff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-weight: 700;
+  color: #2d4b66;
 }
 
 .detalle-card p {
