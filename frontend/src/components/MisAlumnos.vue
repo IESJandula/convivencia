@@ -11,6 +11,20 @@
     </div>
 
     <div class="card-jandula" v-if="grupoTutoria">
+      <div class="filtros-fecha">
+        <div class="filtros-fecha-group">
+          <label for="fecha-desde">Desde</label>
+          <input id="fecha-desde" v-model="filtroFechaDesde" type="date" @change="aplicarFiltroFechas" />
+        </div>
+        <div class="filtros-fecha-group">
+          <label for="fecha-hasta">Hasta</label>
+          <input id="fecha-hasta" v-model="filtroFechaHasta" type="date" @change="aplicarFiltroFechas" />
+        </div>
+        <div class="filtros-fecha-actions">
+          <button class="btn-filtro btn-filtro-secondary" @click="limpiarFiltroFechas">Limpiar</button>
+        </div>
+      </div>
+
       <div class="resumen-grid">
         <article class="metric-card principal">
           <span class="metric-label">Grupo tutoría</span>
@@ -20,8 +34,8 @@
 
         <article class="metric-card">
           <span class="metric-label">Total de partes</span>
-          <strong class="metric-value">{{ partes.length }}</strong>
-          <small>Registro histórico del grupo</small>
+          <strong class="metric-value">{{ partesFiltrados.length }}</strong>
+          <small>Partes del rango seleccionado</small>
         </article>
 
         <article class="metric-card">
@@ -37,7 +51,7 @@
         </article>
       </div>
 
-      <div class="table-shell" v-if="partes.length">
+      <div class="table-shell" v-if="partesFiltrados.length">
         <table>
           <thead>
             <tr>
@@ -76,14 +90,14 @@
         </table>
       </div>
 
-      <div v-if="partes.length && totalPaginas > 1" class="pagination">
+      <div v-if="partesFiltrados.length && totalPaginas > 1" class="pagination">
         <button class="pagination-btn" :disabled="pagina === 0" @click="cambiarPagina(-1)">Anterior</button>
         <span class="pagination-info">Pagina {{ pagina + 1 }} de {{ totalPaginas }}</span>
         <button class="pagination-btn" :disabled="pagina >= totalPaginas - 1" @click="cambiarPagina(1)">Siguiente</button>
       </div>
 
-      <div v-if="!partes.length" class="empty-inline">
-        No hay partes registrados para tu tutoría.
+      <div v-if="!partesFiltrados.length" class="empty-inline">
+        No hay partes registrados para tu tutoría en el rango seleccionado.
       </div>
     </div>
 
@@ -127,19 +141,34 @@ import { API_URL } from '@/config/api'
 export default {
   name: 'MisAlumnos',
   computed: {
+    partesFiltrados() {
+      const desde = this.filtroFechaDesde || ''
+      const hasta = this.filtroFechaHasta || ''
+
+      return (this.partes || []).filter(parte => {
+        const fechaParte = this.normalizarFecha(parte.fecha)
+        if (desde && fechaParte < desde) {
+          return false
+        }
+        if (hasta && fechaParte > hasta) {
+          return false
+        }
+        return true
+      })
+    },
     totalComputados() {
-      return this.partes.filter(parte => this.estaComputado(parte)).length
+      return this.partesFiltrados.filter(parte => this.estaComputado(parte)).length
     },
     totalPendientes() {
-      return this.partes.filter(parte => !this.estaComputado(parte)).length
+      return this.partesFiltrados.filter(parte => !this.estaComputado(parte)).length
     },
     totalPaginas() {
-      return Math.max(1, Math.ceil(this.partes.length / this.pageSize))
+      return Math.max(1, Math.ceil(this.partesFiltrados.length / this.pageSize))
     },
     partesPagina() {
       const inicio = this.pagina * this.pageSize
       const fin = inicio + this.pageSize
-      return this.partes.slice(inicio, fin)
+      return this.partesFiltrados.slice(inicio, fin)
     }
   },
   data() {
@@ -148,6 +177,8 @@ export default {
       partes: [],
       pagina: 0,
       pageSize: 10,
+      filtroFechaDesde: '',
+      filtroFechaHasta: '',
       parteSeleccionado: null,
       mensaje: '',
       mensajeTipo: 'success'
@@ -166,6 +197,8 @@ export default {
         this.grupoTutoria = data.grupoTutoria
         this.partes = data.partes || []
         this.pagina = 0
+        this.filtroFechaDesde = ''
+        this.filtroFechaHasta = ''
 
         if (!this.grupoTutoria) {
           this.mensaje = '⚠️ No hay grupo de tutoría asignado a tu usuario.'
@@ -179,6 +212,18 @@ export default {
     formatearFecha(fecha) {
       if (!fecha) return ''
       return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')
+    },
+    normalizarFecha(fecha) {
+      if (!fecha) return ''
+      return String(fecha).split('T')[0]
+    },
+    aplicarFiltroFechas() {
+      this.pagina = 0
+    },
+    limpiarFiltroFechas() {
+      this.filtroFechaDesde = ''
+      this.filtroFechaHasta = ''
+      this.pagina = 0
     },
     estaComputado(parte) {
       if (!parte) return false
@@ -249,6 +294,66 @@ export default {
   border-radius: 14px;
   box-shadow: 0 10px 28px rgba(27, 44, 62, 0.08);
   padding: 1rem;
+}
+
+.filtros-fecha {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  align-items: end;
+  margin-bottom: 1rem;
+  padding: 0.9rem;
+  border: 1px solid #d9e6f2;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbfe 0%, #eef5fb 100%);
+}
+
+.filtros-fecha-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.filtros-fecha-group label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #425b73;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filtros-fecha-group input {
+  width: 100%;
+  border: 1px solid #cbd7e3;
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  color: #123a5a;
+  background: #ffffff;
+}
+
+.filtros-fecha-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.btn-filtro {
+  background: linear-gradient(135deg, #0f766e 0%, #0f766e 40%, #115e59 100%);
+  color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.18);
+}
+
+.btn-filtro-secondary {
+  background: #ffffff;
+  color: #0f766e;
+  border: 1px solid #9ccbc7;
+  box-shadow: none;
 }
 
 .resumen-grid {
@@ -500,6 +605,18 @@ tbody tr:hover {
 }
 
 @media (max-width: 980px) {
+  .filtros-fecha {
+    grid-template-columns: 1fr;
+  }
+
+  .filtros-fecha-actions {
+    justify-content: stretch;
+  }
+
+  .btn-filtro {
+    width: 100%;
+  }
+
   .resumen-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

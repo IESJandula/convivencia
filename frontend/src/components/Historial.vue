@@ -65,6 +65,7 @@
               <option value="COMPUTADO">Computado/Expulsado</option>
             </select>
           </div>
+          <button class="btn-filtro btn-filtro-secondary btn-limpiar-historial" @click="limpiarFiltros">Limpiar</button>
         </div>
       </div>
 
@@ -693,19 +694,24 @@ export default {
   border: 1px solid #ffeeba;
 }
 
-.btn-clear {
-  background: #e0a800;
-  color: white;
-  border: none;
-  padding: 0.3rem 0.7rem;
-  border-radius: 4px;
+.btn-limpiar-historial {
+  background: linear-gradient(135deg, #0f766e 0%, #0f766e 40%, #115e59 100%);
+  color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 700;
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.18);
+  align-self: end;
 }
 
-.btn-clear:hover {
-  background: #c69500;
+.btn-filtro-secondary {
+  background: #ffffff;
+  color: #0f766e;
+  border: 1px solid #9ccbc7;
+  box-shadow: none;
 }
 
 .filtros {
