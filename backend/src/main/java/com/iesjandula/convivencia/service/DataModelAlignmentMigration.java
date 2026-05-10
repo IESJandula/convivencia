@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Component
 public class DataModelAlignmentMigration implements ApplicationRunner {
 
-    private static final String MIGRATION_KEY = "2026-05-04-conductas-rd327-cleanup-v12";
+    private static final String MIGRATION_KEY = "2026-05-10-alumno-grupo-fk-v1";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -41,6 +41,7 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
 
         ensureAlumnosGrupoIdColumn();
         backfillAlumnosGrupoId();
+        ensureAlumnosGrupoIdNotNull();
 
         deduplicateForeignKeys();
         ensureConstraints();
@@ -759,19 +760,42 @@ public class DataModelAlignmentMigration implements ApplicationRunner {
         );
 
         for (Map<String, Object> alumno : alumnos) {
-            Object grupoId = alumno.get("grupo_id");
-            if (grupoId != null) {
-                continue;
-            }
-
             Integer alumnoId = ((Number) alumno.get("id")).intValue();
             String curso = (String) alumno.get("curso");
             String grupo = (String) alumno.get("grupo");
 
-            Integer targetGrupoId = grupoIndex.get(normalizeKey(curso, grupo));
-            if (targetGrupoId != null) {
-                jdbcTemplate.update("UPDATE alumnos SET grupo_id = ? WHERE id = ?", targetGrupoId, alumnoId);
+            if (curso == null || curso.isBlank()) curso = "Sin curso";
+            if (grupo == null || grupo.isBlank()) grupo = "S";
+
+            String key = normalizeKey(curso, grupo);
+            Integer targetGrupoId = grupoIndex.get(key);
+
+            if (targetGrupoId == null) {
+                // Crear grupo si no existe
+                jdbcTemplate.update("INSERT INTO grupos (curso, letra, activo) VALUES (?, ?, b'1')", curso, grupo);
+                targetGrupoId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
+                grupoIndex.put(key, targetGrupoId);
             }
+
+            jdbcTemplate.update("UPDATE alumnos SET grupo_id = ? WHERE id = ?", targetGrupoId, alumnoId);
+        }
+    }
+
+    private void ensureAlumnosGrupoIdNotNull() {
+        if (!tableExists("alumnos")) return;
+        
+        // Primero nos aseguramos de que no hay nulos
+        jdbcTemplate.update("""
+            UPDATE alumnos a
+            SET a.grupo_id = (SELECT MIN(id) FROM grupos WHERE activo = b'1')
+            WHERE a.grupo_id IS NULL
+            """);
+
+        // Ahora intentamos poner la restricción
+        try {
+            jdbcTemplate.execute("ALTER TABLE alumnos MODIFY COLUMN grupo_id INT NOT NULL");
+        } catch (Exception e) {
+            // Ignorar si falla por alguna restricción de FK previa o similar
         }
     }
 

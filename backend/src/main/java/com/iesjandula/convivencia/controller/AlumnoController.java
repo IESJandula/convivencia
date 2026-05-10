@@ -15,9 +15,11 @@ import java.util.Map;
 public class AlumnoController {
 
     private final AlumnoRepository alumnoRepository;
+    private final com.iesjandula.convivencia.repository.GrupoRepository grupoRepository;
 
-    public AlumnoController(AlumnoRepository alumnoRepository) {
+    public AlumnoController(AlumnoRepository alumnoRepository, com.iesjandula.convivencia.repository.GrupoRepository grupoRepository) {
         this.alumnoRepository = alumnoRepository;
+        this.grupoRepository = grupoRepository;
     }
 
     @GetMapping
@@ -54,8 +56,17 @@ public class AlumnoController {
         Alumno alumno = new Alumno();
         alumno.setNombre(dto.getNombre());
         alumno.setApellidos(dto.getApellidos());
-        alumno.setCurso(dto.getCurso());
-        alumno.setGrupo(dto.getGrupo());
+        
+        com.iesjandula.convivencia.entity.Grupo grupo = grupoRepository.findByCursoAndLetraAndActivoTrue(dto.getCurso(), dto.getGrupo())
+            .orElseGet(() -> {
+                com.iesjandula.convivencia.entity.Grupo nuevo = new com.iesjandula.convivencia.entity.Grupo();
+                nuevo.setCurso(dto.getCurso());
+                nuevo.setLetra(dto.getGrupo());
+                nuevo.setActivo(true);
+                return grupoRepository.save(nuevo);
+            });
+
+        alumno.setGrupo(grupo);
         alumno.setActivo(true);
         return ResponseEntity.ok(alumnoRepository.save(alumno));
     }

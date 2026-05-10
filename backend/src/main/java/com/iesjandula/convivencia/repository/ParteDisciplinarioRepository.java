@@ -23,7 +23,7 @@ public interface ParteDisciplinarioRepository extends JpaRepository<ParteDiscipl
     List<ParteDisciplinario> findByActivoTrue();
     Page<ParteDisciplinario> findByActivoTrue(Pageable pageable);
     Page<ParteDisciplinario> findByProfesorEmailAndActivoTrue(String profesorEmail, Pageable pageable);
-    List<ParteDisciplinario> findByAlumnoCursoAndAlumnoGrupoAndActivoTrueOrderByFechaDesc(String curso, String grupo);
+    List<ParteDisciplinario> findByAlumnoGrupoCursoAndAlumnoGrupoLetraAndActivoTrueOrderByFechaDesc(String curso, String grupo);
 
     long countByAlumnoIdAndGravedadAndActivoTrue(Integer alumnoId, ParteDisciplinario.Gravedad gravedad);
     long countByAlumnoIdAndGravedadAndEstadoComputoAndActivoTrue(Integer alumnoId, ParteDisciplinario.Gravedad gravedad, EstadoComputo estadoComputo);
@@ -33,8 +33,8 @@ public interface ParteDisciplinarioRepository extends JpaRepository<ParteDiscipl
             SELECT p FROM ParteDisciplinario p
             WHERE p.activo = true
               AND (:nombreAlumno IS NULL OR LOWER(CONCAT(p.alumno.nombre, ' ', p.alumno.apellidos)) LIKE LOWER(CONCAT('%', :nombreAlumno, '%')))
-              AND (:curso IS NULL OR p.alumno.curso = :curso)
-              AND (:grupo IS NULL OR p.alumno.grupo = :grupo)
+              AND (:curso IS NULL OR p.alumno.grupo.curso = :curso)
+              AND (:grupo IS NULL OR p.alumno.grupo.letra = :grupo)
             ORDER BY p.fecha DESC
             """)
         List<ParteDisciplinario> findForJefatura(

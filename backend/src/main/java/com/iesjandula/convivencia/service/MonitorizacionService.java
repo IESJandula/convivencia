@@ -122,9 +122,9 @@ public class MonitorizacionService {
         String grupoTutoria = normalizar(grupo.getLetra());
 
         return parteRepository.findByActivoTrue().stream()
-                .filter(parte -> parte.getAlumno() != null)
-                .filter(parte -> normalizar(parte.getAlumno().getCurso()).equals(cursoTutoria))
-                .filter(parte -> normalizar(parte.getAlumno().getGrupo()).equals(grupoTutoria))
+                .filter(parte -> parte.getAlumno() != null && parte.getAlumno().getGrupo() != null)
+                .filter(parte -> normalizar(parte.getAlumno().getGrupo().getCurso()).equals(cursoTutoria))
+                .filter(parte -> normalizar(parte.getAlumno().getGrupo().getLetra()).equals(grupoTutoria))
                 .sorted(Comparator.comparing(ParteDisciplinario::getFecha).reversed())
                 .collect(Collectors.toList());
     }
@@ -143,16 +143,22 @@ public class MonitorizacionService {
                     String nombreCompleto = (parte.getAlumno().getNombre() + " " + parte.getAlumno().getApellidos()).trim();
                     return normalizarTexto(nombreCompleto).contains(nombreNormalizado);
                 })
-                .filter(parte -> cursoNormalizado == null || normalizarTexto(parte.getAlumno().getCurso()).equals(cursoNormalizado))
-                .filter(parte -> grupoNormalizado == null || normalizarTexto(parte.getAlumno().getGrupo()).equals(grupoNormalizado))
+                .filter(parte -> {
+                    if (cursoNormalizado == null) return true;
+                    return parte.getAlumno().getGrupo() != null && normalizarTexto(parte.getAlumno().getGrupo().getCurso()).equals(cursoNormalizado);
+                })
+                .filter(parte -> {
+                    if (grupoNormalizado == null) return true;
+                    return parte.getAlumno().getGrupo() != null && normalizarTexto(parte.getAlumno().getGrupo().getLetra()).equals(grupoNormalizado);
+                })
                 .sorted(Comparator.comparing(ParteDisciplinario::getFecha).reversed())
                 .collect(Collectors.toList());
     }
 
     public List<String> obtenerCursosJefatura() {
         return parteRepository.findByActivoTrue().stream()
-                .filter(parte -> parte.getAlumno() != null && parte.getAlumno().getCurso() != null)
-                .map(parte -> parte.getAlumno().getCurso().trim())
+                .filter(parte -> parte.getAlumno() != null && parte.getAlumno().getGrupo() != null)
+                .map(parte -> parte.getAlumno().getGrupo().getCurso().trim())
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
@@ -161,7 +167,7 @@ public class MonitorizacionService {
     public List<String> obtenerGruposJefatura() {
         return parteRepository.findByActivoTrue().stream()
                 .filter(parte -> parte.getAlumno() != null && parte.getAlumno().getGrupo() != null)
-                .map(parte -> parte.getAlumno().getGrupo().trim())
+                .map(parte -> parte.getAlumno().getGrupo().getLetra().trim())
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
@@ -193,8 +199,11 @@ public class MonitorizacionService {
         Set<String> combinaciones = new LinkedHashSet<>();
 
         alumnoRepository.findByActivoTrue().forEach(alumno -> {
-            String curso = alumno.getCurso() == null ? null : alumno.getCurso().trim();
-            String grupo = alumno.getGrupo() == null ? null : alumno.getGrupo().trim().toUpperCase(Locale.ROOT);
+            if (alumno.getGrupo() == null) {
+                return;
+            }
+            String curso = alumno.getGrupo().getCurso() == null ? null : alumno.getGrupo().getCurso().trim();
+            String grupo = alumno.getGrupo().getLetra() == null ? null : alumno.getGrupo().getLetra().trim().toUpperCase(Locale.ROOT);
 
             if (curso == null || curso.isBlank() || grupo == null || grupo.isBlank()) {
                 return;

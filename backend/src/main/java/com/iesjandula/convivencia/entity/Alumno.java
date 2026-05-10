@@ -23,11 +23,9 @@ public class Alumno {
     @Column(nullable = false, length = 100)
     private String apellidos;
 
-    @Column(nullable = false, length = 50)
-    private String curso;
-
-    @Column(nullable = false, length = 10)
-    private String grupo;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "grupo_id", nullable = false)
+    private Grupo grupo;
 
     @Column(nullable = false)
     private Boolean activo = true;

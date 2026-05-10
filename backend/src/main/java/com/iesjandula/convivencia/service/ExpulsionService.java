@@ -75,8 +75,8 @@ public class ExpulsionService {
                     if (alumno != null) {
                         nombreCompleto = (Objects.requireNonNullElse(alumno.getNombre(), "") + " "
                                 + Objects.requireNonNullElse(alumno.getApellidos(), "")).trim();
-                        curso = Objects.requireNonNullElse(alumno.getCurso(), "");
-                        grupo = Objects.requireNonNullElse(alumno.getGrupo(), "");
+                        curso = (alumno.getGrupo() != null) ? Objects.requireNonNullElse(alumno.getGrupo().getCurso(), "") : "";
+                        grupo = (alumno.getGrupo() != null) ? Objects.requireNonNullElse(alumno.getGrupo().getLetra(), "") : "";
                     }
 
                         List<TareaExpulsion> tareasExpulsion = tareaExpulsionRepository.findByExpulsionId(expulsion.getId());
@@ -115,8 +115,8 @@ public class ExpulsionService {
                     if (alumno != null) {
                     nombreCompleto = (Objects.requireNonNullElse(alumno.getNombre(), "") + " "
                         + Objects.requireNonNullElse(alumno.getApellidos(), "")).trim();
-                    curso = Objects.requireNonNullElse(alumno.getCurso(), "");
-                    grupo = Objects.requireNonNullElse(alumno.getGrupo(), "");
+                    curso = (alumno.getGrupo() != null) ? Objects.requireNonNullElse(alumno.getGrupo().getCurso(), "") : "";
+                    grupo = (alumno.getGrupo() != null) ? Objects.requireNonNullElse(alumno.getGrupo().getLetra(), "") : "";
                     }
 
                     List<TareaExpulsion> tareasExpulsion = tareaExpulsionRepository.findByExpulsionId(expulsion.getId());
@@ -324,14 +324,15 @@ public class ExpulsionService {
     }
 
     private Optional<Grupo> resolverGrupoAlumno(Alumno alumno) {
+        if (alumno.getGrupo() != null) {
+            return Optional.of(alumno.getGrupo());
+        }
+        
         List<Grupo> gruposActivos = grupoRepository.findByActivoTrue();
-        String cursoAlumno = normalize(alumno.getCurso());
-        String grupoAlumno = normalize(alumno.getGrupo());
-
-        return gruposActivos.stream()
-                .filter(grupo -> normalize(grupo.getCurso()).equals(cursoAlumno))
-                .filter(grupo -> normalize(grupo.getLetra()).equals(grupoAlumno))
-                .findFirst();
+        // Fallback si por alguna razón no tiene grupo_id pero tiene campos legacy (aunque ya los borramos de la entidad)
+        // Como borramos curso/grupo de Alumno.java, este fallback ya no funcionaría con getters.
+        // Pero el backfill debería haber funcionado.
+        return Optional.empty();
     }
 
     private String normalize(String valor) {
@@ -396,7 +397,9 @@ public class ExpulsionService {
 
             Alumno alumno = expulsion.getAlumno();
             y = writeLine(content, "Alumno: " + safe(alumno != null ? alumno.getNombre() : "") + " " + safe(alumno != null ? alumno.getApellidos() : ""), left, y, PDType1Font.HELVETICA_BOLD, 11);
-            y = writeLine(content, "Curso/Grupo: " + safe(alumno != null ? alumno.getCurso() : "") + " " + safe(alumno != null ? alumno.getGrupo() : ""), left, y, PDType1Font.HELVETICA, 11);
+            String cursoTexto = (alumno != null && alumno.getGrupo() != null) ? safe(alumno.getGrupo().getCurso()) : "";
+            String grupoTexto = (alumno != null && alumno.getGrupo() != null) ? safe(alumno.getGrupo().getLetra()) : "";
+            y = writeLine(content, "Curso/Grupo: " + cursoTexto + " " + grupoTexto, left, y, PDType1Font.HELVETICA, 11);
             y = writeLine(content, "Fecha inicio expulsión: " + DATE_FMT.format(expulsion.getFechaInicio()), left, y, PDType1Font.HELVETICA, 11);
             y = writeLine(content, "Fecha fin expulsión: " + DATE_FMT.format(expulsion.getFechaFin()), left, y, PDType1Font.HELVETICA, 11);
             y = writeLine(content, "Tramitada por: " + safe(expulsion.getJefatura() != null ? expulsion.getJefatura().getNombre() : ""), left, y, PDType1Font.HELVETICA, 11);

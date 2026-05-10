@@ -60,7 +60,7 @@ public class ParteService {
         ParteDisciplinario parte = new ParteDisciplinario();
         parte.setProfesor(profesor);
         parte.setFecha(dto.getFecha() != null ? dto.getFecha() : LocalDate.now());
-        parte.setCurso(dto.getCurso());
+        parte.setCurso(alumno.getGrupo() != null ? alumno.getGrupo().getCurso() : "Sin curso");
         parte.setAlumno(alumno);
         parte.setDescripcion(dto.getDescripcion());
         parte.setGravedad(dto.getGravedad() != null
@@ -141,8 +141,8 @@ public class ParteService {
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("alumno").get("nombre")), pattern),
                         cb.like(cb.lower(root.get("alumno").get("apellidos")), pattern),
-                        cb.like(cb.lower(root.get("alumno").get("curso")), pattern),
-                        cb.like(cb.lower(root.get("alumno").get("grupo")), pattern)
+                        cb.like(cb.lower(root.get("alumno").get("grupo").get("curso")), pattern),
+                        cb.like(cb.lower(root.get("alumno").get("grupo").get("letra")), pattern)
                 ));
             }
 
@@ -231,8 +231,8 @@ public class ParteService {
         dto.setAlumnoId(parte.getAlumno().getId());
         dto.setAlumnoNombre(parte.getAlumno().getNombre());
         dto.setAlumnoApellidos(parte.getAlumno().getApellidos());
-        dto.setCurso(parte.getAlumno().getCurso());
-        dto.setGrupo(parte.getAlumno().getGrupo());
+        dto.setCurso(parte.getAlumno().getGrupo() != null ? parte.getAlumno().getGrupo().getCurso() : "");
+        dto.setGrupo(parte.getAlumno().getGrupo() != null ? parte.getAlumno().getGrupo().getLetra() : "");
         dto.setTareas(parte.getTareas());
         dto.setArchivoUrl(parte.getArchivoUrl());
         dto.setDescripcion(parte.getDescripcion());
