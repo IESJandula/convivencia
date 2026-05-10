@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ public class ExpulsionService {
 
     public List<ExpulsionPdfItemDto> listarExpulsionesParaPdf() {
         return expulsionRepository.findByActivoTrue().stream()
+                .map(this::aplicarEstadoAutomatico)
                 .sorted(Comparator.comparing(Expulsion::getFechaCreacion, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(expulsion -> {
                     Alumno alumno = expulsion.getAlumno();
@@ -90,6 +92,9 @@ public class ExpulsionService {
                             nombreCompleto,
                             curso,
                             grupo,
+                            expulsion.getFechaInicio() != null ? expulsion.getFechaInicio().toString() : null,
+                            expulsion.getFechaFin() != null ? expulsion.getFechaFin().toString() : null,
+                            expulsion.getEstado() != null ? expulsion.getEstado().toString() : "CREADA",
                             puedeGenerarCartaExpulsion(expulsion.getId()),
                             tareasCompletadas,
                             tareasTotales
@@ -100,6 +105,7 @@ public class ExpulsionService {
 
             public Page<ExpulsionPdfItemDto> listarExpulsionesParaPdfPaginado(org.springframework.data.domain.Pageable pageable) {
             return expulsionRepository.findByActivoTrue(pageable)
+                .map(this::aplicarEstadoAutomatico)
                 .map(expulsion -> {
                     Alumno alumno = expulsion.getAlumno();
                     String nombreCompleto = "";
@@ -126,6 +132,9 @@ public class ExpulsionService {
                         nombreCompleto,
                         curso,
                         grupo,
+                        expulsion.getFechaInicio() != null ? expulsion.getFechaInicio().toString() : null,
+                        expulsion.getFechaFin() != null ? expulsion.getFechaFin().toString() : null,
+                        expulsion.getEstado() != null ? expulsion.getEstado().toString() : "CREADA",
                         puedeGenerarCartaExpulsion(expulsion.getId()),
                         tareasCompletadas,
                         tareasTotales
@@ -357,9 +366,16 @@ public class ExpulsionService {
         return materias.get(idx);
     }
 
+    @Transactional
     public byte[] generarCartaExpulsionPdf(Integer expulsionId) {
         Expulsion expulsion = expulsionRepository.findById(expulsionId)
                 .orElseThrow(() -> new RuntimeException("Expulsión no encontrada"));
+
+        // Transicionar de CREADA a CARTA_GENERADA
+        if (expulsion.getEstado() == Expulsion.Estado.CREADA) {
+            expulsion.setEstado(Expulsion.Estado.CARTA_GENERADA);
+            expulsionRepository.save(expulsion);
+        }
 
         List<ParteExpulsion> partesVinculados = parteExpulsionRepository.findByExpulsionId(expulsionId);
         List<TareaExpulsion> tareas = tareaExpulsionRepository.findByExpulsionId(expulsionId);
@@ -559,6 +575,32 @@ public class ExpulsionService {
         return text.substring(0, Math.max(0, maxLen - 3)) + "...";
     }
 
+    private Expulsion aplicarEstadoAutomatico(Expulsion expulsion) {
+        if (expulsion == null) {
+            return null;
+        }
+
+        boolean cambiado = false;
+        Expulsion.Estado estadoActual = expulsion.getEstado();
+
+        if (estadoActual == null) {
+            expulsion.setEstado(Expulsion.Estado.CREADA);
+            estadoActual = Expulsion.Estado.CREADA;
+            cambiado = true;
+        }
+
+        LocalDate fechaFin = expulsion.getFechaFin();
+        if (fechaFin != null && !fechaFin.isAfter(LocalDate.now()) && estadoActual != Expulsion.Estado.FINALIZADA) {
+            expulsion.setEstado(Expulsion.Estado.FINALIZADA);
+            cambiado = true;
+        }
+
+        if (cambiado) {
+            return expulsionRepository.save(expulsion);
+        }
+        return expulsion;
+    }
+
     public boolean puedeGenerarCartaExpulsion(Integer expulsionId) {
         List<TareaExpulsion> tareas = tareaExpulsionRepository.findByExpulsionId(expulsionId);
         if (tareas.isEmpty()) {
@@ -581,5 +623,39 @@ public class ExpulsionService {
         }
 
         return !texto.toLowerCase(Locale.ROOT).startsWith(TEXTO_TAREA_AUTOGENERADA);
+    }
+
+    @Transactional
+    public void actualizarEstadoExpulsion(Integer expulsionId, String estadoTexto) {
+        Expulsion expulsion = expulsionRepository.findById(expulsionId)
+                .orElseThrow(() -> new RuntimeException("Expulsión no encontrada"));
+
+        Expulsion.Estado nuevoEstado;
+        try {
+            nuevoEstado = Expulsion.Estado.valueOf(estadoTexto.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Estado inválido: " + estadoTexto);
+        }
+
+        Expulsion.Estado actual = expulsion.getEstado() != null ? expulsion.getEstado() : Expulsion.Estado.CREADA;
+
+        if (!esTransicionPermitida(actual, nuevoEstado)) {
+            throw new RuntimeException("Transición no permitida: " + actual + " -> " + nuevoEstado);
+        }
+
+        expulsion.setEstado(nuevoEstado);
+        expulsionRepository.save(expulsion);
+    }
+
+    private boolean esTransicionPermitida(Expulsion.Estado actual, Expulsion.Estado siguiente) {
+        return switch (actual) {
+            case CREADA -> siguiente == Expulsion.Estado.CARTA_GENERADA
+                    || siguiente == Expulsion.Estado.FIRMADA
+                    || siguiente == Expulsion.Estado.FINALIZADA;
+            case CARTA_GENERADA -> siguiente == Expulsion.Estado.FIRMADA
+                    || siguiente == Expulsion.Estado.FINALIZADA;
+            case FIRMADA -> siguiente == Expulsion.Estado.FINALIZADA;
+            case FINALIZADA -> false; // No se puede transicionar desde FINALIZADA
+        };
     }
 }

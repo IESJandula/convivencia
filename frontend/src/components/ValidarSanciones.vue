@@ -72,7 +72,8 @@
             <th>Curso</th>
             <th>Grupo</th>
             <th>Tareas</th>
-            <th>Estado</th>
+            <th>Estado ciclo</th>
+            <th>Estado PDF</th>
             <th>Acción</th>
           </tr>
         </thead>
@@ -86,6 +87,11 @@
             <td>{{ exp.curso || '-' }}</td>
             <td>{{ exp.grupo || '-' }}</td>
             <td>{{ formatearProgresoTareas(exp) }}</td>
+            <td>
+              <span :class="['pill', claseEstadoExpulsion(exp.estado)]">
+                {{ textoEstadoExpulsion(exp.estado) }}
+              </span>
+            </td>
             <td>
               <span :class="['pill', exp.puedeGenerarPdf ? 'pill-ok' : 'pill-pending']">
                 {{ exp.puedeGenerarPdf ? 'Lista para PDF' : 'Pendiente tareas' }}
@@ -115,7 +121,12 @@
         <div class="modal-detalle" @click.stop>
           <div class="modal-detalle-head">
             <div>
-              <h3>{{ modalExpulsion.alumnoNombreCompleto || 'Alumno' }}</h3>
+              <h3>
+                {{ modalExpulsion.alumnoNombreCompleto || 'Alumno' }}
+                <span class="tiempo-expulsion-inline">
+                  {{ textoTiempoExpulsion(modalExpulsion.fechaInicio, modalExpulsion.fechaFin) }}
+                </span>
+              </h3>
               <p>
                 <strong>Curso:</strong> {{ modalExpulsion.curso || '-' }}
                 <strong style="margin-left: 1rem;">Grupo:</strong> {{ modalExpulsion.grupo || '-' }}
@@ -138,6 +149,14 @@
               <p><strong>Profesor:</strong> {{ tarea.profesorNombre || 'Sin nombre' }} ({{ tarea.profesorEmail || '-' }})</p>
               <p><strong>Tarea:</strong> {{ tarea.descripcionTarea || 'Sin tarea definida' }}</p>
             </article>
+          </div>
+
+          <div class="firma-familia" v-if="modalExpulsion && modalExpulsion.expulsionId">
+                <button class="btn btn-primary"
+                  :disabled="marcarFirmaLoading || (modalExpulsion.estado && (modalExpulsion.estado.toUpperCase() === 'FIRMADA' || modalExpulsion.estado.toUpperCase() === 'FINALIZADA' || modalExpulsion.estado.toUpperCase() === 'CREADA'))"
+                  @click="marcarFamiliaFirmado">
+              {{ marcarFirmaLoading ? 'Actualizando...' : 'La familia ha firmado' }}
+            </button>
           </div>
         </div>
       </div>
@@ -247,6 +266,7 @@ export default {
       expulsionesPdf: [],
       cargandoPdfId: null,
       cargandoExpulsionesPdf: false,
+      marcarFirmaLoading: false,
       pageExpulsiones: 0,
       sizeExpulsiones: 10,
       totalExpulsiones: 0,
@@ -633,6 +653,9 @@ export default {
         alumnoNombreCompleto: expulsion.alumnoNombreCompleto,
         curso: expulsion.curso,
         grupo: expulsion.grupo,
+        fechaInicio: expulsion.fechaInicio,
+        fechaFin: expulsion.fechaFin,
+        estado: expulsion.estado,
         cargando: true,
         tareas: []
       }
@@ -655,6 +678,26 @@ export default {
     cerrarDetalleExpulsion() {
       this.modalExpulsion = null
     },
+
+    async marcarFamiliaFirmado() {
+      if (!this.modalExpulsion || !this.modalExpulsion.expulsionId) return
+      if (this.modalExpulsion.estado && this.modalExpulsion.estado.toUpperCase() === 'FIRMADA') return
+
+      this.marcarFirmaLoading = true
+      try {
+        await axios.patch(`${API_URL}/expulsiones/${this.modalExpulsion.expulsionId}/estado`, { estado: 'FIRMADA' })
+        this.modalExpulsion.estado = 'FIRMADA'
+        this.mensaje = 'Estado actualizado a "Familia ha firmado"'
+        this.mensajeTipo = 'success'
+        // Refresh list to show updated state
+        this.cargarExpulsionesPdf(true)
+      } catch (err) {
+        this.mensaje = err?.response?.data?.error || 'No se pudo actualizar el estado'
+        this.mensajeTipo = 'error'
+      } finally {
+        this.marcarFirmaLoading = false
+      }
+    },
     formatearFecha(fecha) {
       if (!fecha) return ''
       return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')
@@ -663,6 +706,38 @@ export default {
       const completadas = Number(expulsion?.tareasCompletadas || 0)
       const totales = Number(expulsion?.tareasTotales || 0)
       return `${completadas}/${totales}`
+    },
+    textoEstadoExpulsion(estado) {
+      const key = (estado || 'CREADA').toUpperCase()
+      if (key === 'CREADA') return 'Registrada, carta no generada aun'
+      if (key === 'CARTA_GENERADA') return 'PDF disponible'
+      if (key === 'FIRMADA') return 'Familia ha firmado'
+      if (key === 'FINALIZADA') return 'Alumno reincorporado'
+      return key
+    },
+    textoTiempoExpulsion(fechaInicio, fechaFin) {
+      if (!fechaInicio || !fechaFin) {
+        return '-'
+      }
+
+      const inicio = new Date(`${fechaInicio}T00:00:00`)
+      const fin = new Date(`${fechaFin}T00:00:00`)
+      if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+        return '-'
+      }
+
+      const msPorDia = 24 * 60 * 60 * 1000
+      const dias = Math.max(1, Math.floor((fin - inicio) / msPorDia) + 1)
+      const textoRango = `${inicio.toLocaleDateString('es-ES')} - ${fin.toLocaleDateString('es-ES')}`
+      return `${textoRango} (${dias} ${dias === 1 ? 'día' : 'días'})`
+    },
+    claseEstadoExpulsion(estado) {
+      const key = (estado || 'CREADA').toUpperCase()
+      if (key === 'CREADA') return 'pill-estado-creada'
+      if (key === 'CARTA_GENERADA') return 'pill-estado-carta'
+      if (key === 'FIRMADA') return 'pill-estado-firmada'
+      if (key === 'FINALIZADA') return 'pill-estado-finalizada'
+      return 'pill-pending'
     }
   }
 }
@@ -949,6 +1024,10 @@ tbody tr:last-child td {
 }
 .pill-pending { background: #fef3c7; color: #92400e; }
 .pill-ok { background: #dcfce7; color: #166534; }
+.pill-estado-creada { background: #e2e8f0; color: #334155; }
+.pill-estado-carta { background: #dbeafe; color: #1d4ed8; }
+.pill-estado-firmada { background: #fef3c7; color: #92400e; }
+.pill-estado-finalizada { background: #dcfce7; color: #166534; }
 
 .alumno-link {
   background: transparent;
@@ -1001,6 +1080,13 @@ tbody tr:last-child td {
 .modal-detalle-head h3 {
   margin: 0;
   color: #163f60;
+}
+
+.tiempo-expulsion-inline {
+  margin-left: 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4b647a;
 }
 
 .modal-detalle-head p {

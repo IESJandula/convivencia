@@ -4,6 +4,7 @@ import com.iesjandula.convivencia.dto.CrearExpulsionRequestDto;
 import com.iesjandula.convivencia.dto.CrearExpulsionResponseDto;
 import com.iesjandula.convivencia.dto.ExpulsionPdfItemDto;
 import com.iesjandula.convivencia.dto.PageResponse;
+import com.iesjandula.convivencia.dto.ActualizarEstadoExpulsionRequestDto;
 import com.iesjandula.convivencia.entity.ParteDisciplinario;
 import com.iesjandula.convivencia.service.ExpulsionService;
 import org.springframework.data.domain.Page;
@@ -73,5 +74,16 @@ public class ExpulsionController {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.desc("id")));
         Page<ExpulsionPdfItemDto> resultado = expulsionService.listarExpulsionesParaPdfPaginado(pageable);
         return ResponseEntity.ok(PageResponse.from(resultado));
+    }
+
+    @PatchMapping("/{expulsionId}/estado")
+    public ResponseEntity<?> actualizarEstado(@PathVariable Integer expulsionId,
+                                              @RequestBody ActualizarEstadoExpulsionRequestDto request) {
+        try {
+            expulsionService.actualizarEstadoExpulsion(expulsionId, request.getEstado());
+            return ResponseEntity.ok(Map.of("ok", true));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

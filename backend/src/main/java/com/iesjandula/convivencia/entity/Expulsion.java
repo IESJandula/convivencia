@@ -15,6 +15,13 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Expulsion {
 
+    public enum Estado {
+        CREADA,
+        CARTA_GENERADA,
+        FIRMADA,
+        FINALIZADA
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -39,11 +46,18 @@ public class Expulsion {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Estado estado = Estado.CREADA;
+
     @PrePersist
     protected void onCreate() {
         fechaCreacion = LocalDateTime.now();
         if (activo == null) {
             activo = true;
+        }
+        if (estado == null) {
+            estado = Estado.CREADA;
         }
     }
 }
