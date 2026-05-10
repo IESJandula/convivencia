@@ -12,5 +12,11 @@ import java.util.List;
 public interface ExpulsionRepository extends JpaRepository<Expulsion, Integer> {
     List<Expulsion> findByAlumnoIdAndActivoTrue(Integer alumnoId);
     List<Expulsion> findByActivoTrue();
-    Page<Expulsion> findByActivoTrue(Pageable pageable);
+    @org.springframework.data.jpa.repository.Query("SELECT e FROM Expulsion e " +
+           "JOIN e.alumno a " +
+           "JOIN a.grupo g " +
+           "WHERE e.activo = true " +
+           "AND (:curso IS NULL OR g.curso = :curso) " +
+           "AND (:letra IS NULL OR g.letra = :letra)")
+    Page<Expulsion> findByFilters(String curso, String letra, Pageable pageable);
 }

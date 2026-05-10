@@ -109,6 +109,8 @@ public class ParteService {
                                                             LocalDate fechaDesde,
                                                             LocalDate fechaHasta,
                                                             String alumnoTexto,
+                                                            String cursoFiltro,
+                                                            String grupoFiltro,
                                                             String profesorTexto,
                                                             String gravedad,
                                                             String conductaTexto,
@@ -140,10 +142,16 @@ public class ParteService {
                 String pattern = "%" + alumnoTexto.toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("alumno").get("nombre")), pattern),
-                        cb.like(cb.lower(root.get("alumno").get("apellidos")), pattern),
-                        cb.like(cb.lower(root.get("alumno").get("grupo").get("curso")), pattern),
-                        cb.like(cb.lower(root.get("alumno").get("grupo").get("letra")), pattern)
+                        cb.like(cb.lower(root.get("alumno").get("apellidos")), pattern)
                 ));
+            }
+
+            if (cursoFiltro != null && !cursoFiltro.isBlank() && !"TODOS".equalsIgnoreCase(cursoFiltro)) {
+                predicates.add(cb.equal(root.get("alumno").get("grupo").get("curso"), cursoFiltro));
+            }
+
+            if (grupoFiltro != null && !grupoFiltro.isBlank() && !"TODOS".equalsIgnoreCase(grupoFiltro)) {
+                predicates.add(cb.equal(root.get("alumno").get("grupo").get("letra"), grupoFiltro));
             }
 
             if (profesorTexto != null && !profesorTexto.isBlank()) {
@@ -214,11 +222,16 @@ public class ParteService {
         return partes.stream().map(this::toAulaConvivenciaDto).collect(Collectors.toList());
     }
 
-    public Page<ParteAulaConvivenciaDto> listarPartesAulaConvivenciaPaginado(LocalDate fecha, Pageable pageable) {
+    public Page<ParteAulaConvivenciaDto> listarPartesAulaConvivenciaPaginado(LocalDate fecha, String curso, String grupo, Pageable pageable) {
+        String c = (curso != null && !curso.isBlank() && !"TODOS".equalsIgnoreCase(curso)) ? curso : null;
+        String g = (grupo != null && !grupo.isBlank() && !"TODOS".equalsIgnoreCase(grupo)) ? grupo : null;
+
         Page<ParteDisciplinario> partes = parteRepository.findPendientesSinSesionAulaPaginado(
             ParteDisciplinario.MedidaTomada.AULA_CONVIVENCIA,
             ParteDisciplinario.Estado.PENDIENTE,
             ParteDisciplinario.EstadoComputo.ACTIVO,
+            c,
+            g,
             pageable
         );
 

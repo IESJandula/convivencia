@@ -119,8 +119,9 @@ public class ConvivenciaApplication {
             List<Grupo> grupos = new ArrayList<>(grupoRepository.findByActivoTrue());
             Set<String> combinacionesReales = new LinkedHashSet<>();
             for (Alumno alumno : alumnoRepository.findByActivoTrue()) {
-                String curso = alumno.getCurso() == null ? null : alumno.getCurso().trim();
-                String letra = alumno.getGrupo() == null ? null : alumno.getGrupo().trim().toUpperCase(Locale.ROOT);
+                if (alumno.getGrupo() == null) continue;
+                String curso = alumno.getGrupo().getCurso() == null ? null : alumno.getGrupo().getCurso().trim();
+                String letra = alumno.getGrupo().getLetra() == null ? null : alumno.getGrupo().getLetra().trim().toUpperCase(Locale.ROOT);
 
                 if (curso == null || curso.isBlank() || letra == null || letra.isBlank()) {
                     continue;

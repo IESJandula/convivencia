@@ -68,11 +68,13 @@ public class ExpulsionController {
 
     @GetMapping("/pendientes-pdf")
     public ResponseEntity<PageResponse<ExpulsionPdfItemDto>> listarPendientesPdf(
+            @RequestParam(required = false) String curso,
+            @RequestParam(required = false) String grupo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fechaCreacion"), Sort.Order.desc("id")));
-        Page<ExpulsionPdfItemDto> resultado = expulsionService.listarExpulsionesParaPdfPaginado(pageable);
+        Page<ExpulsionPdfItemDto> resultado = expulsionService.listarExpulsionesParaPdfPaginado(curso, grupo, pageable);
         return ResponseEntity.ok(PageResponse.from(resultado));
     }
 

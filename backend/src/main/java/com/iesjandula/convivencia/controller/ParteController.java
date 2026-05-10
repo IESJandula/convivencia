@@ -38,6 +38,8 @@ public class ParteController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(required = false) String alumnoTexto,
+            @RequestParam(required = false) String curso,
+            @RequestParam(required = false) String grupo,
             @RequestParam(required = false) String profesorTexto,
             @RequestParam(required = false) String gravedad,
             @RequestParam(required = false) String conductaTexto,
@@ -50,6 +52,8 @@ public class ParteController {
                 fechaDesde,
                 fechaHasta,
                 alumnoTexto,
+                curso,
+                grupo,
                 profesorTexto,
                 gravedad,
                 conductaTexto,
@@ -73,6 +77,8 @@ public class ParteController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(required = false) String alumnoTexto,
+            @RequestParam(required = false) String curso,
+            @RequestParam(required = false) String grupo,
             @RequestParam(required = false) String profesorTexto,
             @RequestParam(required = false) String gravedad,
             @RequestParam(required = false) String conductaTexto,
@@ -85,6 +91,8 @@ public class ParteController {
                 fechaDesde,
                 fechaHasta,
                 alumnoTexto,
+                curso,
+                grupo,
                 profesorTexto,
                 gravedad,
                 conductaTexto,
@@ -106,11 +114,13 @@ public class ParteController {
     public ResponseEntity<PageResponse<ParteAulaConvivenciaDto>> listarPartesAulaConvivencia(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String curso,
+            @RequestParam(required = false) String grupo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha
     ) {
         LocalDate fechaBusqueda = fecha != null ? fecha : LocalDate.now();
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fecha"), Sort.Order.desc("id")));
-        Page<ParteAulaConvivenciaDto> resultado = parteService.listarPartesAulaConvivenciaPaginado(fechaBusqueda, pageable);
+        Page<ParteAulaConvivenciaDto> resultado = parteService.listarPartesAulaConvivenciaPaginado(fechaBusqueda, curso, grupo, pageable);
         return ResponseEntity.ok(PageResponse.from(resultado));
     }
 

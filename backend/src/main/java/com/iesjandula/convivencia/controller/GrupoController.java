@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/grupos")
 @CrossOrigin(origins = "*")
@@ -68,5 +70,21 @@ public class GrupoController {
         response.put("message", "Tutor asignado correctamente");
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/cursos")
+    public ResponseEntity<List<String>> listarCursos() {
+        return ResponseEntity.ok(
+            grupoRepository.findByActivoTrue().stream()
+                .map(Grupo::getCurso)
+                .distinct()
+                .sorted()
+                .collect(java.util.stream.Collectors.toList())
+        );
+    }
+
+    @GetMapping("/curso/{curso}")
+    public ResponseEntity<List<Grupo>> listarGruposPorCurso(@PathVariable String curso) {
+        return ResponseEntity.ok(grupoRepository.findByCursoAndActivoTrue(curso));
     }
 }

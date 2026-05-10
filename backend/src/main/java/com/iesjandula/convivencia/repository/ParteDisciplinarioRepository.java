@@ -83,6 +83,8 @@ public interface ParteDisciplinarioRepository extends JpaRepository<ParteDiscipl
                   AND p.estado = :estado
                   AND p.estadoComputo = :estadoComputo
                   AND p.activo = true
+                  AND (:curso IS NULL OR p.alumno.grupo.curso = :curso)
+                  AND (:grupo IS NULL OR p.alumno.grupo.letra = :grupo)
                   AND NOT EXISTS (
                         SELECT s.id FROM SesionConvivencia s
                         WHERE s.parte.id = p.id
@@ -95,6 +97,8 @@ public interface ParteDisciplinarioRepository extends JpaRepository<ParteDiscipl
                   AND p.estado = :estado
                   AND p.estadoComputo = :estadoComputo
                   AND p.activo = true
+                  AND (:curso IS NULL OR p.alumno.grupo.curso = :curso)
+                  AND (:grupo IS NULL OR p.alumno.grupo.letra = :grupo)
                   AND NOT EXISTS (
                         SELECT s.id FROM SesionConvivencia s
                         WHERE s.parte.id = p.id
@@ -105,6 +109,8 @@ public interface ParteDisciplinarioRepository extends JpaRepository<ParteDiscipl
             @Param("medida") MedidaTomada medida,
             @Param("estado") Estado estado,
             @Param("estadoComputo") EstadoComputo estadoComputo,
+            @Param("curso") String curso,
+            @Param("grupo") String grupo,
             Pageable pageable
         );
 

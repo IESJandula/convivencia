@@ -60,7 +60,17 @@
     <div v-if="esVistaExpulsiones" class="pdf-actions">
       <div class="pdf-actions-header">
         <h3>Cartas PDF de expulsión</h3>
-        <button class="btn btn-primary" @click="actualizarListadoPdf">🔄 Actualizar PDFs</button>
+        <div class="filtros-inline">
+          <select v-model="filtros.curso" @change="actualizarListadoPdf">
+            <option value="">Todos los cursos</option>
+            <option v-for="c in cursos" :key="c" :value="c">{{ c }}</option>
+          </select>
+          <select v-model="filtros.grupo" @change="actualizarListadoPdf">
+            <option value="">Todos los grupos</option>
+            <option v-for="g in grupos" :key="g" :value="g">{{ g }}</option>
+          </select>
+          <button class="btn btn-primary" @click="actualizarListadoPdf">🔄 Actualizar</button>
+        </div>
       </div>
       <p v-if="cargandoExpulsionesPdf && !expulsionesPdf.length" class="sin-datos">Cargando expulsiones...</p>
       <p v-else-if="!expulsionesPdf.length" class="sin-datos">No hay expulsiones registradas todavía.</p>
@@ -215,8 +225,8 @@
           </td>
           <td>{{ formatearFecha(parte.fecha) }}</td>
           <td>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</td>
-          <td>{{ parte.alumno.curso }}</td>
-          <td>{{ parte.alumno.grupo }}</td>
+          <td>{{ parte.alumno.grupo ? parte.alumno.grupo.curso : '-' }}</td>
+          <td>{{ parte.alumno.grupo ? parte.alumno.grupo.letra : '-' }}</td>
           <td>{{ parte.profesor.nombre }}</td>
           <td>{{ parte.gravedad }}</td>
           <td>{{ parte.estadoComputo }}</td>
@@ -435,6 +445,8 @@ export default {
       try {
         const { data } = await axios.get(`${API_URL}/expulsiones/pendientes-pdf`, {
           params: {
+            curso: this.filtros.curso || null,
+            grupo: this.filtros.grupo || null,
             page: this.pageExpulsiones,
             size: this.sizeExpulsiones
           }
@@ -1014,6 +1026,15 @@ tbody tr:last-child td {
 .pdf-actions-header h3 {
   margin: 0;
   color: #1f3f5a;
+}
+.filtros-inline {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.filtros-inline select {
+  padding: 0.4rem;
+  font-size: 0.85rem;
 }
 
 .pill {

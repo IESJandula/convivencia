@@ -12,6 +12,7 @@ public interface AlumnoRepository extends JpaRepository<Alumno, Integer> {
     List<Alumno> findByActivoTrue();
     List<Alumno> findByGrupoCursoAndActivoTrue(String curso);
     List<Alumno> findByGrupoCursoAndGrupoLetraAndActivoTrue(String curso, String letra);
+    List<Alumno> findByGrupoIdAndActivoTrue(Integer grupoId);
 
     @Query("SELECT a FROM Alumno a WHERE a.activo = true OR a.activo IS NULL")
     List<Alumno> findDisponibles();

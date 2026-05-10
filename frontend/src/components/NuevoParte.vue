@@ -45,25 +45,28 @@
         <div class="form-grid">
           <div class="field-group">
             <label>Seleccionar Curso:</label>
-            <select v-model="parte.curso" @change="cargarAlumnos" class="jandula-input" required>
+            <select v-model="selectedCurso" @change="onCursoChange" class="jandula-input" required>
               <option value="">Buscar curso...</option>
-              <option value="1º ESO">1º ESO</option>
-              <option value="2º ESO">2º ESO</option>
-              <option value="3º ESO">3º ESO</option>
-              <option value="4º ESO">4º ESO</option>
-              <option value="1º BIC">1º BIC</option>
-              <option value="2º BIC">2º BIC</option>
-              <option value="OS1B">OS1B</option>
-              <option value="OS2B">OS2B</option>
+              <option v-for="c in cursos" :key="c" :value="c">{{ c }}</option>
             </select>
           </div>
 
           <div class="field-group">
+            <label>Seleccionar Grupo:</label>
+            <select v-model="selectedGrupoId" @change="onGrupoChange" class="jandula-input" :disabled="!grupos.length" required>
+              <option value="">{{ grupos.length ? 'Buscar grupo...' : 'Seleccione curso' }}</option>
+              <option v-for="g in grupos" :key="g.id" :value="g.id">{{ g.letra }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="field-group full-width">
             <label>Seleccionar Alumno/a:</label>
             <select v-model="parte.alumnoId" class="jandula-input" :disabled="!alumnos.length" required>
-              <option value="">{{ alumnos.length ? 'Buscar por nombre...' : 'Primero seleccione curso' }}</option>
+              <option value="">{{ alumnos.length ? 'Buscar por nombre...' : 'Seleccione grupo' }}</option>
               <option v-for="alumno in alumnos" :key="alumno.id" :value="alumno.id">
-                {{ alumno.apellidos }}, {{ alumno.nombre }} ({{ alumno.grupo }})
+                {{ alumno.apellidos }}, {{ alumno.nombre }}
               </option>
             </select>
           </div>
@@ -204,6 +207,10 @@ export default {
         archivoUrl: '',
         conductaId: ''
       },
+      selectedCurso: '',
+      selectedGrupoId: '',
+      cursos: [],
+      grupos: [],
       alumnos: [],
       conductas: [],
       mensaje: '',
@@ -226,6 +233,7 @@ export default {
   mounted() {
     this.cargarConductas()
     this.cargarEmailProfesor()
+    this.cargarCursos()
   },
   computed: {
     esImagen() {
@@ -294,14 +302,38 @@ export default {
       this.parte.conductaId = conducta?.id || ''
       this.mostrarConductaModal = false
     },
-    async cargarAlumnos() {
-      if (!this.parte.curso) return
+    async cargarCursos() {
+      try {
+        const response = await axios.get(`${API_URL}/grupos/cursos`)
+        this.cursos = response.data
+      } catch (e) { console.error(e) }
+    },
+    async onCursoChange() {
+      this.selectedGrupoId = ''
+      this.grupos = []
+      this.alumnos = []
+      this.parte.alumnoId = ''
+      if (!this.selectedCurso) return
+      
+      try {
+        const response = await axios.get(`${API_URL}/grupos/curso/${this.selectedCurso}`)
+        this.grupos = response.data
+      } catch (e) { console.error(e) }
+    },
+    async onGrupoChange() {
+      this.alumnos = []
+      this.parte.alumnoId = ''
+      if (!this.selectedGrupoId) return
+      
       this.cargandoAlumnos = true
       try {
-        const response = await axios.get(`${API_URL}/alumnos/curso/${this.parte.curso}`)
+        const response = await axios.get(`${API_URL}/alumnos/grupo/${this.selectedGrupoId}`)
         this.alumnos = response.data
       } catch (e) { console.error(e) }
       finally { this.cargandoAlumnos = false }
+    },
+    async cargarAlumnos() {
+      // Legacy - kept for safety if called elsewhere but we now use onGrupoChange
     },
     async crearParte() {
       this.guardando = true
@@ -355,6 +387,9 @@ export default {
     },
     limpiarFormulario() {
       this.parte = { profesorEmail: this.parte.profesorEmail, fecha: new Date().toISOString().split('T')[0], curso: '', alumnoId: '', descripcion: '', gravedad: 'LEVE', medidaTomada: 'AULA_CONVIVENCIA', tareas: '', archivoUrl: '', conductaId: '' }
+      this.selectedCurso = ''
+      this.selectedGrupoId = ''
+      this.grupos = []
       this.alumnos = []
       this.mostrarConductaModal = false
     }
@@ -504,6 +539,10 @@ export default {
 .conducta-wide {
   grid-column: 1 / -1;
   overflow: visible;
+}
+
+.full-width {
+  grid-column: 1 / -1;
 }
 
 .conducta-select {

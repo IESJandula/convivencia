@@ -103,8 +103,11 @@ public class ExpulsionService {
                 .collect(Collectors.toList());
     }
 
-            public Page<ExpulsionPdfItemDto> listarExpulsionesParaPdfPaginado(org.springframework.data.domain.Pageable pageable) {
-            return expulsionRepository.findByActivoTrue(pageable)
+            public Page<ExpulsionPdfItemDto> listarExpulsionesParaPdfPaginado(String cursoFiltro, String grupoFiltro, org.springframework.data.domain.Pageable pageable) {
+                String c = (cursoFiltro != null && !cursoFiltro.trim().isEmpty() && !"TODOS".equalsIgnoreCase(cursoFiltro)) ? cursoFiltro.trim() : null;
+                String g = (grupoFiltro != null && !grupoFiltro.trim().isEmpty() && !"TODOS".equalsIgnoreCase(grupoFiltro)) ? grupoFiltro.trim() : null;
+
+                return expulsionRepository.findByFilters(c, g, pageable)
                 .map(this::aplicarEstadoAutomatico)
                 .map(expulsion -> {
                     Alumno alumno = expulsion.getAlumno();

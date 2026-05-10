@@ -39,6 +39,11 @@ public class AlumnoController {
         return ResponseEntity.ok(alumnoRepository.findByCursoDisponibles(curso));
     }
 
+    @GetMapping("/grupo/{grupoId}")
+    public ResponseEntity<List<Alumno>> listarPorGrupo(@PathVariable Integer grupoId) {
+        return ResponseEntity.ok(alumnoRepository.findByGrupoIdAndActivoTrue(grupoId));
+    }
+
     @GetMapping("/debug/raw")
     public ResponseEntity<Map<String, Object>> debugRaw() {
         List<Alumno> raw = alumnoRepository.findAll();

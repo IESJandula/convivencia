@@ -38,8 +38,22 @@
             <input type="date" v-model="filtroFechaHasta" />
           </div>
           <div class="form-group">
-            <label>Alumno o Grupo</label>
-            <input type="text" v-model="filtroTextoAlumno" placeholder="Buscar..." />
+            <label>Alumno</label>
+            <input type="text" v-model="filtroTextoAlumno" placeholder="Nombre..." />
+          </div>
+          <div class="form-group">
+            <label>Curso</label>
+            <select v-model="filtroCurso">
+              <option value="">Todos</option>
+              <option v-for="c in cursos" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Grupo</label>
+            <select v-model="filtroGrupo">
+              <option value="">Todos</option>
+              <option v-for="g in grupos" :key="g" :value="g">{{ g }}</option>
+            </select>
           </div>
           <div class="form-group" v-if="!esVistaProfesor">
             <label>Profesor</label>
@@ -102,7 +116,7 @@
                   <strong>{{ parte.alumno.nombre }} {{ parte.alumno.apellidos }}</strong>
                 </div>
               </td>
-              <td>{{ parte.curso }}</td>
+              <td>{{ parte.alumno.grupo ? parte.alumno.grupo.curso : '-' }}</td>
               <td>
                 <span :class="['gravedad-tag', parte.gravedad === 'GRAVE' ? 'grave' : 'leve']">
                   {{ parte.gravedad || 'LEVE' }}
@@ -151,7 +165,10 @@
             <strong>Alumno:</strong> {{ parteSeleccionado.alumno.nombre }} {{ parteSeleccionado.alumno.apellidos }}
           </div>
           <div class="detalle-item">
-            <strong>Curso:</strong> {{ parteSeleccionado.curso }}
+            <strong>Curso:</strong> {{ parteSeleccionado.alumno.grupo ? parteSeleccionado.alumno.grupo.curso : '-' }}
+          </div>
+          <div class="detalle-item">
+            <strong>Grupo:</strong> {{ parteSeleccionado.alumno.grupo ? parteSeleccionado.alumno.grupo.letra : '-' }}
           </div>
           <div class="detalle-item">
             <strong>Conducta:</strong> {{ parteSeleccionado.conducta.codigo }} - {{ parteSeleccionado.conducta.descripcion }}
@@ -263,6 +280,10 @@ export default {
       filtroFechaDesde: '',
       filtroFechaHasta: '',
       filtroTextoAlumno: '',
+      filtroCurso: '',
+      filtroGrupo: '',
+      cursos: [],
+      grupos: [],
       filtroProfesor: '',
       filtroGravedad: '',
       filtroConducta: '',
@@ -303,6 +324,7 @@ export default {
   },
   mounted() {
     this.inicializarContextoUsuario()
+    this.cargarFiltros()
     this.cargarPartes()
   },
   beforeUnmount() {
@@ -319,6 +341,12 @@ export default {
       this.programarCarga()
     },
     filtroTextoAlumno() {
+      this.programarCarga()
+    },
+    filtroCurso() {
+      this.programarCarga()
+    },
+    filtroGrupo() {
       this.programarCarga()
     },
     filtroProfesor() {
@@ -412,6 +440,8 @@ export default {
         fechaDesde: this.filtroFechaDesde || null,
         fechaHasta: this.filtroFechaHasta || null,
         alumnoTexto: this.filtroTextoAlumno || null,
+        curso: this.filtroCurso || null,
+        grupo: this.filtroGrupo || null,
         profesorTexto: this.esVistaProfesor ? null : (this.filtroProfesor || null),
         gravedad: this.filtroGravedad || null,
         conductaTexto: this.filtroConducta || null,
@@ -455,6 +485,8 @@ export default {
       this.filtroFechaDesde = ''
       this.filtroFechaHasta = ''
       this.filtroTextoAlumno = ''
+      this.filtroCurso = ''
+      this.filtroGrupo = ''
       this.filtroProfesor = ''
       this.filtroGravedad = ''
       this.filtroConducta = ''
@@ -467,6 +499,17 @@ export default {
       this.$router.push('/historial')
       this.page = 0
       this.cargarPartes()
+    },
+    
+    async cargarFiltros() {
+      try {
+        const { data } = await axios.get(`${API_URL}/monitorizacion/jefatura/filtros`)
+        this.cursos = data?.cursos || []
+        this.grupos = data?.grupos || []
+      } catch (error) {
+        this.cursos = []
+        this.grupos = []
+      }
     },
     
     async verDetalle(parte) {

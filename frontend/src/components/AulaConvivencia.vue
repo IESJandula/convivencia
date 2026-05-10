@@ -31,6 +31,20 @@
           <option value="6">6ª (13:45 - 14:45)</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Curso</label>
+        <select v-model="filtroCurso" @change="cargarPartes">
+          <option value="">Todos</option>
+          <option v-for="c in cursos" :key="c" :value="c">{{ c }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Grupo</label>
+        <select v-model="filtroGrupo" @change="cargarPartes">
+          <option value="">Todos</option>
+          <option v-for="g in grupos" :key="g" :value="g">{{ g }}</option>
+        </select>
+      </div>
       <div class="filtros-info">
         <span class="filtros-info-item">👥 Alumnos en aula: <strong>{{ totalElements }}</strong></span>
         <span class="filtros-info-item">📝 Recuerda guardar tras evaluar.</span>
@@ -199,7 +213,10 @@ export default {
       modalTareas: null,
       mensaje: '',
       mensajeTipo: '',
-      toastVisible: false,
+      filtroCurso: '',
+      filtroGrupo: '',
+      cursos: [],
+      grupos: [],
       toastMensaje: '',
       toastTipo: 'success',
       toastTimer: null,
@@ -214,6 +231,7 @@ export default {
   },
   mounted() {
     this.inicializarProfesorGuardia()
+    this.cargarFiltros()
     this.cargarPartes()
   },
   methods: {
@@ -289,6 +307,8 @@ export default {
           axios.get(`${API_URL}/partes/aula-convivencia`, {
             params: {
               fecha: this.fecha,
+              curso: this.filtroCurso || null,
+              grupo: this.filtroGrupo || null,
               page: pageToUse,
               size: this.size
             }
@@ -341,6 +361,18 @@ export default {
         }
       }
     },
+    
+    async cargarFiltros() {
+      try {
+        const { data } = await axios.get(`${API_URL}/monitorizacion/jefatura/filtros`)
+        this.cursos = data?.cursos || []
+        this.grupos = data?.grupos || []
+      } catch (error) {
+        this.cursos = []
+        this.grupos = []
+      }
+    },
+    
     cambiarPagina(delta) {
       const nuevaPagina = this.page + delta
       if (nuevaPagina < 0 || nuevaPagina >= this.totalPages) {
@@ -527,14 +559,15 @@ export default {
 }
 
 .filtros {
-  display: grid;
-  grid-template-columns: 1fr 1.15fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 2rem;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 1.3rem;
   border-radius: 12px;
   border: 2px solid #e0e0e0;
+  align-items: end;
 }
 
 .filtros .form-group {
