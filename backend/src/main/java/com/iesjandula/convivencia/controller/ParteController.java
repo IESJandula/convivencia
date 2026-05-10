@@ -34,7 +34,7 @@ public class ParteController {
     @GetMapping
     public ResponseEntity<PageResponse<ParteDisciplinario>> listarTodos(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(required = false) String alumnoTexto,
@@ -69,7 +69,7 @@ public class ParteController {
     public ResponseEntity<PageResponse<ParteDisciplinario>> listarPorProfesor(
             @PathVariable String email,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(required = false) String alumnoTexto,
@@ -103,11 +103,15 @@ public class ParteController {
     }
 
     @GetMapping("/aula-convivencia")
-    public ResponseEntity<List<ParteAulaConvivenciaDto>> listarPartesAulaConvivencia(
+    public ResponseEntity<PageResponse<ParteAulaConvivenciaDto>> listarPartesAulaConvivencia(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha
     ) {
         LocalDate fechaBusqueda = fecha != null ? fecha : LocalDate.now();
-        return ResponseEntity.ok(parteService.listarPartesAulaConvivencia(fechaBusqueda));
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("fecha"), Sort.Order.desc("id")));
+        Page<ParteAulaConvivenciaDto> resultado = parteService.listarPartesAulaConvivenciaPaginado(fechaBusqueda, pageable);
+        return ResponseEntity.ok(PageResponse.from(resultado));
     }
 
     @DeleteMapping("/{id}")

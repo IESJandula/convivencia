@@ -3,6 +3,7 @@ package com.iesjandula.convivencia.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 
 @Data
@@ -18,4 +19,5 @@ public class TareaExpulsionDto {
     private String asignatura;
     private String descripcionTarea;
     private String estado;
+    private LocalDateTime fechaCompletada;
 }

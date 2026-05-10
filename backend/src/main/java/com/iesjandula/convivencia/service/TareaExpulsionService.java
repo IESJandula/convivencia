@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,6 +34,13 @@ public class TareaExpulsionService {
 
     public Page<TareaExpulsionDto> listarPorProfesorPaginado(String profesorEmail, Pageable pageable) {
         return tareaExpulsionRepository.findByProfesorEmail(profesorEmail, pageable)
+                .map(this::toDto);
+    }
+
+    public Page<TareaExpulsionDto> listarPorProfesorPaginado(String profesorEmail,
+                                                             TareaExpulsion.Estado estado,
+                                                             Pageable pageable) {
+        return tareaExpulsionRepository.findByProfesorEmailAndEstado(profesorEmail, estado, pageable)
                 .map(this::toDto);
     }
 
@@ -88,6 +96,9 @@ public class TareaExpulsionService {
                 throw new RuntimeException("Debes escribir una actividad real antes de enviarla");
             }
             tarea.setEstado(TareaExpulsion.Estado.COMPLETADA);
+            if (tarea.getFechaCompletada() == null) {
+                tarea.setFechaCompletada(LocalDateTime.now());
+            }
         }
 
         tarea = tareaExpulsionRepository.save(tarea);
@@ -108,7 +119,8 @@ public class TareaExpulsionService {
                 tarea.getExpulsion().getFechaFin(),
                 tarea.getAsignatura(),
                 tarea.getDescripcionTarea(),
-                tarea.getEstado().name()
+                tarea.getEstado().name(),
+                tarea.getFechaCompletada()
         );
     }
 

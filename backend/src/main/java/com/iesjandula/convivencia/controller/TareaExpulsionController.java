@@ -3,6 +3,7 @@ package com.iesjandula.convivencia.controller;
 import com.iesjandula.convivencia.dto.ActualizarTareaExpulsionRequestDto;
 import com.iesjandula.convivencia.dto.PageResponse;
 import com.iesjandula.convivencia.dto.TareaExpulsionDto;
+import com.iesjandula.convivencia.entity.TareaExpulsion;
 import com.iesjandula.convivencia.service.TareaExpulsionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,10 +29,20 @@ public class TareaExpulsionController {
     public ResponseEntity<PageResponse<TareaExpulsionDto>> listarPorProfesor(
             @PathVariable String email,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "30") int size
+            @RequestParam(defaultValue = "4") int size,
+            @RequestParam(required = false) String estado
     ) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.asc("estado"), Sort.Order.desc("id")));
-        Page<TareaExpulsionDto> resultado = tareaExpulsionService.listarPorProfesorPaginado(email, pageable);
+        Page<TareaExpulsionDto> resultado;
+        if (estado == null || estado.isBlank()) {
+            PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("id")));
+            resultado = tareaExpulsionService.listarPorProfesorPaginado(email, pageable);
+        } else {
+            TareaExpulsion.Estado estadoEnum = TareaExpulsion.Estado.valueOf(estado.trim().toUpperCase());
+            PageRequest pageable = estadoEnum == TareaExpulsion.Estado.COMPLETADA
+                    ? PageRequest.of(page, size, Sort.by(Sort.Order.desc("fechaCompletada"), Sort.Order.desc("id")))
+                    : PageRequest.of(page, size, Sort.by(Sort.Order.desc("id")));
+            resultado = tareaExpulsionService.listarPorProfesorPaginado(email, estadoEnum, pageable);
+        }
         return ResponseEntity.ok(PageResponse.from(resultado));
     }
 

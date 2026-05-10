@@ -85,7 +85,7 @@
       <button class="pagination-btn" :disabled="page >= totalPages - 1" @click="cambiarPagina(1)">Siguiente</button>
     </div>
 
-    <p v-else-if="activeTab === 'pendientes'" class="sin-datos">No tienes tareas de expulsión pendientes.</p>
+    <p v-if="activeTab === 'pendientes' && !tareasPendientes.length" class="sin-datos">No tienes tareas de expulsión pendientes.</p>
 
     <div v-if="activeTab === 'enviadas' && tareasCompletadasList.length" class="task-grid sent-grid">
       <article
@@ -116,6 +116,11 @@
           </div>
         </div>
 
+        <div class="meta-item" v-if="tarea.fechaCompletada">
+          <span class="meta-label">Completada el</span>
+          <strong>{{ formatearFechaHora(tarea.fechaCompletada) }}</strong>
+        </div>
+
         <label class="editor-label">Tarea enviada</label>
         <textarea
           v-model="ediciones[tarea.id]"
@@ -143,7 +148,13 @@
       </article>
     </div>
 
-    <p v-else-if="activeTab === 'enviadas'" class="sin-datos">No tienes tareas enviadas.</p>
+    <div v-if="activeTab === 'enviadas' && totalPages > 1" class="pagination">
+      <button class="pagination-btn" :disabled="page === 0" @click="cambiarPagina(-1)">Anterior</button>
+      <span class="pagination-info">Pagina {{ page + 1 }} de {{ totalPages }}</span>
+      <button class="pagination-btn" :disabled="page >= totalPages - 1" @click="cambiarPagina(1)">Siguiente</button>
+    </div>
+
+    <p v-if="activeTab === 'enviadas' && !tareasCompletadasList.length" class="sin-datos">No tienes tareas enviadas.</p>
 
     <div v-if="modalAlumno" class="modal-overlay" @click="cerrarDetalleAlumno">
       <div class="modal-detalle" @click.stop>
@@ -201,7 +212,7 @@ export default {
       modalAlumno: null,
       activeTab: 'pendientes',
       page: 0,
-      size: 30,
+      size: 4,
       totalElements: 0,
       totalPages: 0,
       resumenPendientes: null,
@@ -211,10 +222,10 @@ export default {
   },
   computed: {
     tareasPendientes() {
-      return this.tareas.filter(t => t.estado !== 'COMPLETADA')
+      return this.tareas
     },
     tareasCompletadasList() {
-      return this.tareas.filter(t => t.estado === 'COMPLETADA')
+      return this.tareas
     },
     pendientes() {
       if (this.resumenPendientes !== null) {
@@ -240,12 +251,17 @@ export default {
   watch: {
     '$route.query.tab'() {
       this.sincronizarTabDesdeRuta()
+      this.page = 0
+      this.cargarTareas()
     }
   },
   methods: {
     sincronizarTabDesdeRuta() {
       const tab = this.$route?.query?.tab
       this.activeTab = tab === 'enviadas' ? 'enviadas' : 'pendientes'
+    },
+    estadoFiltroActual() {
+      return this.activeTab === 'enviadas' ? 'COMPLETADA' : 'PENDIENTE'
     },
     cambiarPagina(delta) {
       const nuevaPagina = this.page + delta
@@ -274,7 +290,8 @@ export default {
       try {
         const params = {
           page: this.page,
-          size: this.size
+          size: this.size,
+          estado: this.estadoFiltroActual()
         }
         if (!preservarPagina) {
           this.page = 0
@@ -316,7 +333,12 @@ export default {
         this.mensaje = ''
         this.mensajeTipo = 'success'
         this.mostrarToast('Tareas enviadas con exito', 'success')
-        await Promise.all([this.cargarTareas(true), this.cargarResumen()])
+        if (this.activeTab === 'pendientes') {
+          await this.$router.replace({ path: '/tareas-expulsion', query: { tab: 'enviadas' } })
+        } else {
+          await this.cargarTareas(true)
+        }
+        await this.cargarResumen()
       } catch (error) {
         this.mensaje = error?.response?.data?.error || 'No se pudo actualizar la tarea.'
         this.mensajeTipo = 'error'
@@ -328,6 +350,10 @@ export default {
     formatearFecha(fecha) {
       if (!fecha) return ''
       return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')
+    },
+    formatearFechaHora(fechaHora) {
+      if (!fechaHora) return ''
+      return new Date(fechaHora).toLocaleString('es-ES')
     },
     normalizarDescripcionParaEdicion(descripcion) {
       const texto = (descripcion || '').trim()

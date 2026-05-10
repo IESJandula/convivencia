@@ -32,7 +32,7 @@
         </select>
       </div>
       <div class="filtros-info">
-        <span class="filtros-info-item">👥 Alumnos en aula: <strong>{{ partesAula.length }}</strong></span>
+        <span class="filtros-info-item">👥 Alumnos en aula: <strong>{{ totalElements }}</strong></span>
         <span class="filtros-info-item">📝 Recuerda guardar tras evaluar.</span>
       </div>
     </div>
@@ -79,7 +79,7 @@
         </thead>
         <tbody>
           <tr v-for="(parte, index) in partesAula" :key="parte.id">
-            <td class="numero">{{ index + 1 }}</td>
+            <td class="numero">{{ page * size + index + 1 }}</td>
             <td class="alumno-nombre">
               <strong>{{ parte.alumnoApellidos }}, {{ parte.alumnoNombre }}</strong>
             </td>
@@ -134,6 +134,12 @@
         <button @click="guardarSesiones" class="btn btn-success btn-guardar-evaluaciones" :disabled="guardando">
           {{ guardando ? '⏳ Guardando...' : '💾 Guardar Evaluaciones' }}
         </button>
+      </div>
+
+      <div v-if="totalPages > 1" class="pagination">
+        <button class="pagination-btn" :disabled="page === 0" @click="cambiarPagina(-1)">Anterior</button>
+        <span class="pagination-info">Pagina {{ page + 1 }} de {{ totalPages }}</span>
+        <button class="pagination-btn" :disabled="page >= totalPages - 1" @click="cambiarPagina(1)">Siguiente</button>
       </div>
     </div>
 
@@ -198,7 +204,12 @@ export default {
       toastTipo: 'success',
       toastTimer: null,
       cargando: false,
-      guardando: false
+      guardando: false,
+      page: 0,
+      size: 10,
+      savedScroll: null,
+      totalElements: 0,
+      totalPages: 0
     }
   },
   mounted() {
@@ -264,17 +275,31 @@ export default {
       return '3' // Por defecto 3ª hora
     },
     
-    async cargarPartes() {
+    async cargarPartes(preservarPagina = false) {
       this.cargando = true
       this.mensaje = ''
       
       try {
+        const pageToUse = preservarPagina ? this.page : 0
+        if (!preservarPagina) {
+          this.page = 0
+        }
+
         const [partesResponse, sesionesResponse] = await Promise.all([
           axios.get(`${API_URL}/partes/aula-convivencia`, {
-            params: { fecha: this.fecha }
+            params: {
+              fecha: this.fecha,
+              page: pageToUse,
+              size: this.size
+            }
           }),
           axios.get(`${API_URL}/sesiones/fecha/${this.fecha}/tramo/${this.tramoActual}`)
         ])
+
+        const partesPayload = partesResponse.data || {}
+        const partesData = Array.isArray(partesPayload.content)
+          ? partesPayload.content
+          : (Array.isArray(partesResponse.data) ? partesResponse.data : [])
 
         const sesionesPorParte = new Map(
           (sesionesResponse.data || [])
@@ -282,7 +307,7 @@ export default {
             .map(sesion => [sesion.parte.id, sesion])
         )
 
-        this.partesAula = (partesResponse.data || []).map(parte => {
+        this.partesAula = partesData.map(parte => {
           const sesionGuardada = sesionesPorParte.get(parte.id)
           return {
             ...parte,
@@ -291,14 +316,44 @@ export default {
             observaciones: sesionGuardada?.observaciones || ''
           }
         })
+        this.totalElements = Number(partesPayload.totalElements || this.partesAula.length)
+        this.totalPages = Number(partesPayload.totalPages || 1)
 
       } catch (error) {
         console.error('Error al cargar partes:', error)
         this.mensaje = '❌ Error al cargar los partes del aula de convivencia'
         this.mensajeTipo = 'error'
+        this.partesAula = []
+        this.totalElements = 0
+        this.totalPages = 0
       } finally {
         this.cargando = false
+        // Restaurar scroll si procede (evita salto a arriba al cambiar página)
+        if (this.savedScroll !== null) {
+          this.$nextTick(() => {
+            try {
+              window.scrollTo({ top: this.savedScroll, behavior: 'auto' })
+            } catch (e) {
+              window.scrollTo(0, this.savedScroll)
+            }
+            this.savedScroll = null
+          })
+        }
       }
+    },
+    cambiarPagina(delta) {
+      const nuevaPagina = this.page + delta
+      if (nuevaPagina < 0 || nuevaPagina >= this.totalPages) {
+        return
+      }
+      // Guardar la posición de scroll antes de cambiar la página
+      try {
+        this.savedScroll = window.scrollY || 0
+      } catch (e) {
+        this.savedScroll = 0
+      }
+      this.page = nuevaPagina
+      this.cargarPartes(true)
     },
     
     verTareas(parte) {
@@ -715,6 +770,34 @@ table tbody tr:last-child td {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+.pagination {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.pagination-btn {
+  background: #0f766e;
+  color: #ffffff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .modal {

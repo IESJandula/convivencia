@@ -50,7 +50,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="parte in partes" :key="parte.id">
+            <tr v-for="parte in partesPagina" :key="parte.id">
               <td>{{ formatearFecha(parte.fecha) }}</td>
               <td>
                 <div class="alumno-col">
@@ -76,7 +76,13 @@
         </table>
       </div>
 
-      <div v-else class="empty-inline">
+      <div v-if="partes.length && totalPaginas > 1" class="pagination">
+        <button class="pagination-btn" :disabled="pagina === 0" @click="cambiarPagina(-1)">Anterior</button>
+        <span class="pagination-info">Pagina {{ pagina + 1 }} de {{ totalPaginas }}</span>
+        <button class="pagination-btn" :disabled="pagina >= totalPaginas - 1" @click="cambiarPagina(1)">Siguiente</button>
+      </div>
+
+      <div v-if="!partes.length" class="empty-inline">
         No hay partes registrados para tu tutoría.
       </div>
     </div>
@@ -126,12 +132,22 @@ export default {
     },
     totalPendientes() {
       return this.partes.filter(parte => !this.estaComputado(parte)).length
+    },
+    totalPaginas() {
+      return Math.max(1, Math.ceil(this.partes.length / this.pageSize))
+    },
+    partesPagina() {
+      const inicio = this.pagina * this.pageSize
+      const fin = inicio + this.pageSize
+      return this.partes.slice(inicio, fin)
     }
   },
   data() {
     return {
       grupoTutoria: null,
       partes: [],
+      pagina: 0,
+      pageSize: 10,
       parteSeleccionado: null,
       mensaje: '',
       mensajeTipo: 'success'
@@ -149,6 +165,7 @@ export default {
         const { data } = await axios.get(`${API_URL}/monitorizacion/tutor/${profesor.email}`)
         this.grupoTutoria = data.grupoTutoria
         this.partes = data.partes || []
+        this.pagina = 0
 
         if (!this.grupoTutoria) {
           this.mensaje = '⚠️ No hay grupo de tutoría asignado a tu usuario.'
@@ -177,6 +194,13 @@ export default {
     },
     verParte(parte) {
       this.parteSeleccionado = parte
+    },
+    cambiarPagina(delta) {
+      const nuevaPagina = this.pagina + delta
+      if (nuevaPagina < 0 || nuevaPagina >= this.totalPaginas) {
+        return
+      }
+      this.pagina = nuevaPagina
     },
     cerrarDetalle() {
       this.parteSeleccionado = null
@@ -354,15 +378,52 @@ tbody tr:hover {
   color: #92400e;
 }
 .btn-ver {
-  border: 1px solid #0b4e6b;
-  background: #fff;
-  color: #0b4e6b;
-  border-radius: 6px;
-  padding: 0.35rem 0.6rem;
+  background: linear-gradient(135deg, #0f766e 0%, #0f766e 40%, #115e59 100%);
+  color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  font-weight: 600;
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.26);
+  transition: transform 0.16s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
-.btn-ver:hover { background: #e6f2f7; }
+
+.btn-ver:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 12px 22px rgba(15, 118, 110, 0.34);
+}
+
+.pagination {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.pagination-btn {
+  background: #0f766e;
+  color: #ffffff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  color: #1e293b;
+  font-weight: 700;
+}
 
 .empty-inline {
   text-align: center;

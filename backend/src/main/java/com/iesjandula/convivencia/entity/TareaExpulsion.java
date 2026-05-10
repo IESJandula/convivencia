@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "tareas_expulsion")
 @Data
@@ -33,6 +35,9 @@ public class TareaExpulsion {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Estado estado = Estado.PENDIENTE;
+
+    @Column(name = "fecha_completada")
+    private LocalDateTime fechaCompletada;
 
     public enum Estado {
         PENDIENTE,

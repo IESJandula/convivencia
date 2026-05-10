@@ -186,7 +186,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="parte in partesActivos" :key="parte.id">
+        <tr v-for="parte in partesActivosPaginados" :key="parte.id">
           <td>
             <input
               type="checkbox"
@@ -204,6 +204,11 @@
         </tr>
       </tbody>
     </table>
+    <div v-if="totalPaginasPartes > 1" class="pagination">
+      <button class="pagination-btn" :disabled="pagePartes === 0" @click="cambiarPaginaPartes(-1)">Anterior</button>
+      <span class="pagination-info">Pagina {{ pagePartes + 1 }} de {{ totalPaginasPartes }}</span>
+      <button class="pagination-btn" :disabled="pagePartes >= totalPaginasPartes - 1" @click="cambiarPaginaPartes(1)">Siguiente</button>
+    </div>
     </div>
 
     <p v-else class="sin-datos">No hay partes en estado ACTIVO con esos filtros.</p>
@@ -243,9 +248,11 @@ export default {
       cargandoPdfId: null,
       cargandoExpulsionesPdf: false,
       pageExpulsiones: 0,
-      sizeExpulsiones: 20,
+      sizeExpulsiones: 10,
       totalExpulsiones: 0,
       totalPaginasExpulsiones: 0,
+      pagePartes: 0,
+      sizePartes: 10,
       observadoresActivos: false,
       modalExpulsion: null
     }
@@ -272,11 +279,28 @@ export default {
       )
       return ids.size
     }
+    ,
+    partesActivosPaginados() {
+      const items = this.partesActivos || []
+      const start = this.pagePartes * this.sizePartes
+      return items.slice(start, start + this.sizePartes)
+    },
+    totalPaginasPartes() {
+      return Math.max(1, Math.ceil((this.partesActivos || []).length / this.sizePartes))
+    }
   },
   watch: {
     '$route.path'(nuevaRuta) {
       if (nuevaRuta === '/validar-sanciones' || nuevaRuta === '/expulsiones') {
         this.recargarVistaJefatura()
+      }
+    }
+    ,
+    partesActivos(newVal) {
+      // Ajustar página actual si cambia el número de elementos
+      const maxPages = Math.max(1, Math.ceil((newVal || []).length / this.sizePartes))
+      if (this.pagePartes >= maxPages) {
+        this.pagePartes = Math.max(0, maxPages - 1)
       }
     }
   },
@@ -323,7 +347,8 @@ export default {
           selectedPartes: this.selectedPartes,
           fechaInicio: this.fechaInicio,
           fechaFin: this.fechaFin,
-          pageExpulsiones: this.pageExpulsiones
+          pageExpulsiones: this.pageExpulsiones,
+          pagePartes: this.pagePartes
         }
         sessionStorage.setItem(JEFATURA_STATE_KEY, JSON.stringify(estado))
       } catch {
@@ -345,6 +370,9 @@ export default {
         this.fechaFin = estado.fechaFin || this.fechaFin
         if (Number.isInteger(estado.pageExpulsiones)) {
           this.pageExpulsiones = estado.pageExpulsiones
+        }
+        if (Number.isInteger(estado.pagePartes)) {
+          this.pagePartes = estado.pagePartes
         }
       } catch {
       }
@@ -407,6 +435,13 @@ export default {
           this.cargandoExpulsionesPdf = false
         }
       }
+    },
+    cambiarPaginaPartes(delta) {
+      const nueva = this.pagePartes + delta
+      if (nueva < 0 || nueva >= this.totalPaginasPartes) return
+      this.pagePartes = nueva
+      // keep state persisted
+      this.guardarEstadoVista()
     },
     cambiarPaginaExpulsiones(delta) {
       const nuevaPagina = this.pageExpulsiones + delta

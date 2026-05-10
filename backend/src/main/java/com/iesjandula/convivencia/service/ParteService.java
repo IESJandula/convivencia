@@ -211,19 +211,32 @@ public class ParteService {
             ParteDisciplinario.EstadoComputo.ACTIVO
         );
 
-        return partes.stream().map(parte -> {
-            ParteAulaConvivenciaDto dto = new ParteAulaConvivenciaDto();
-            dto.setId(parte.getId());
-            dto.setAlumnoId(parte.getAlumno().getId());
-            dto.setAlumnoNombre(parte.getAlumno().getNombre());
-            dto.setAlumnoApellidos(parte.getAlumno().getApellidos());
-            dto.setCurso(parte.getAlumno().getCurso());
-            dto.setGrupo(parte.getAlumno().getGrupo());
-            dto.setTareas(parte.getTareas());
-            dto.setArchivoUrl(parte.getArchivoUrl());
-            dto.setDescripcion(parte.getDescripcion());
-            return dto;
-        }).collect(Collectors.toList());
+        return partes.stream().map(this::toAulaConvivenciaDto).collect(Collectors.toList());
+    }
+
+    public Page<ParteAulaConvivenciaDto> listarPartesAulaConvivenciaPaginado(LocalDate fecha, Pageable pageable) {
+        Page<ParteDisciplinario> partes = parteRepository.findPendientesSinSesionAulaPaginado(
+            ParteDisciplinario.MedidaTomada.AULA_CONVIVENCIA,
+            ParteDisciplinario.Estado.PENDIENTE,
+            ParteDisciplinario.EstadoComputo.ACTIVO,
+            pageable
+        );
+
+        return partes.map(this::toAulaConvivenciaDto);
+    }
+
+    private ParteAulaConvivenciaDto toAulaConvivenciaDto(ParteDisciplinario parte) {
+        ParteAulaConvivenciaDto dto = new ParteAulaConvivenciaDto();
+        dto.setId(parte.getId());
+        dto.setAlumnoId(parte.getAlumno().getId());
+        dto.setAlumnoNombre(parte.getAlumno().getNombre());
+        dto.setAlumnoApellidos(parte.getAlumno().getApellidos());
+        dto.setCurso(parte.getAlumno().getCurso());
+        dto.setGrupo(parte.getAlumno().getGrupo());
+        dto.setTareas(parte.getTareas());
+        dto.setArchivoUrl(parte.getArchivoUrl());
+        dto.setDescripcion(parte.getDescripcion());
+        return dto;
     }
 
     @Transactional

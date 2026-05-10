@@ -12,6 +12,7 @@ import java.util.List;
 public interface TareaExpulsionRepository extends JpaRepository<TareaExpulsion, Integer> {
     List<TareaExpulsion> findByProfesorEmail(String profesorEmail);
     Page<TareaExpulsion> findByProfesorEmail(String profesorEmail, Pageable pageable);
+    Page<TareaExpulsion> findByProfesorEmailAndEstado(String profesorEmail, TareaExpulsion.Estado estado, Pageable pageable);
     List<TareaExpulsion> findByExpulsionId(Integer expulsionId);
     List<TareaExpulsion> findByProfesorEmailAndEstado(String profesorEmail, TareaExpulsion.Estado estado);
     long countByProfesorEmail(String profesorEmail);
