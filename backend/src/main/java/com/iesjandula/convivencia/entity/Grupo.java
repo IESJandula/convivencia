@@ -23,7 +23,7 @@ public class Grupo {
     private String letra;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "tutor_email", unique = true)
+    @JoinColumn(name = "tutor_email", unique = false)
     private Profesor tutor;
 
     @Column(nullable = false)

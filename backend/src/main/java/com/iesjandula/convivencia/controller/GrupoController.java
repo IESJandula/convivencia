@@ -37,14 +37,6 @@ public class GrupoController {
         Profesor tutor = profesorRepository.findByEmailNormalized(dto.getTutorEmail().trim())
                 .orElseThrow(() -> new RuntimeException("Tutor no encontrado"));
 
-        grupoRepository.findByTutorEmailAndActivoTrue(tutor.getEmail())
-            .ifPresent(grupoAnterior -> {
-                if (!(grupoAnterior.getCurso().equalsIgnoreCase(dto.getCurso().trim())
-                    && grupoAnterior.getLetra().equalsIgnoreCase(dto.getLetra().trim()))) {
-                grupoAnterior.setTutor(null);
-                grupoRepository.save(grupoAnterior);
-                }
-            });
 
         Grupo grupo = grupoRepository.findByCursoAndActivoTrue(dto.getCurso().trim()).stream()
                 .filter(g -> dto.getLetra().trim().equalsIgnoreCase(g.getLetra()))
