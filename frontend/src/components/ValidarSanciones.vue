@@ -699,13 +699,13 @@ export default {
       try {
         await axios.patch(`${API_URL}/expulsiones/${this.modalExpulsion.expulsionId}/estado`, { estado: 'FIRMADA' })
         this.modalExpulsion.estado = 'FIRMADA'
-        this.mensaje = 'Estado actualizado a "Familia ha firmado"'
-        this.mensajeTipo = 'success'
+        this.mensaje = ''
+        this.mostrarToast('Familia ha firmado', 'success')
         // Refresh list to show updated state
         this.cargarExpulsionesPdf(true)
       } catch (err) {
-        this.mensaje = err?.response?.data?.error || 'No se pudo actualizar el estado'
-        this.mensajeTipo = 'error'
+        this.mensaje = ''
+        this.mostrarToast(err?.response?.data?.error || 'No se pudo actualizar el estado', 'error')
       } finally {
         this.marcarFirmaLoading = false
       }

@@ -116,7 +116,7 @@
         <div class="detalle-grid">
           <p><strong>Fecha:</strong> {{ formatearFecha(parteSeleccionado.fecha) }}</p>
           <p><strong>Alumno:</strong> {{ parteSeleccionado.alumno?.nombre }} {{ parteSeleccionado.alumno?.apellidos }}</p>
-          <p><strong>Curso:</strong> {{ parteSeleccionado.alumno?.curso }} {{ parteSeleccionado.alumno?.grupo }}</p>
+          <p><strong>Curso:</strong> {{ parteSeleccionado.alumno?.grupo?.curso || '-' }} {{ parteSeleccionado.alumno?.grupo?.letra || '' }}</p>
           <p><strong>Profesor:</strong> {{ parteSeleccionado.profesor?.nombre }}</p>
           <p><strong>Gravedad:</strong> {{ parteSeleccionado.gravedad }}</p>
           <p><strong>Estado:</strong> {{ estaComputado(parteSeleccionado) ? 'EXPULSADO' : 'PENDIENTE' }}</p>

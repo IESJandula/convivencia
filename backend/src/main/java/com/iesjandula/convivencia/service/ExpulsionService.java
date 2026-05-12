@@ -596,7 +596,7 @@ public class ExpulsionService {
         }
 
         LocalDate fechaFin = expulsion.getFechaFin();
-        if (fechaFin != null && !fechaFin.isAfter(LocalDate.now()) && estadoActual != Expulsion.Estado.FINALIZADA) {
+        if (fechaFin != null && fechaFin.isBefore(LocalDate.now()) && estadoActual != Expulsion.Estado.FINALIZADA) {
             expulsion.setEstado(Expulsion.Estado.FINALIZADA);
             cambiado = true;
         }

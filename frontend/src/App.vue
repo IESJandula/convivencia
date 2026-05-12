@@ -248,7 +248,10 @@ export default {
         console.error('Error cargando avisos:', error)
       }
     },
-    toggleAvisos() {
+    async toggleAvisos() {
+      if (!this.mostrarAvisos) {
+        await this.cargarAvisos()
+      }
       this.mostrarAvisos = !this.mostrarAvisos
     },
     cerrarAvisosClickFuera(event) {
