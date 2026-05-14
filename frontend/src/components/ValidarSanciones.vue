@@ -82,7 +82,7 @@
             <th>Curso</th>
             <th>Grupo</th>
             <th>Tareas</th>
-            <th>Estado ciclo</th>
+            <th>Expulsiones</th>
             <th>Estado PDF</th>
             <th>Acción</th>
           </tr>
