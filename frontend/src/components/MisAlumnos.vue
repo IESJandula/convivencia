@@ -398,6 +398,24 @@ export default {
   border: 1px solid #e1eaf1;
   border-radius: 10px;
   overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: #9fb3c7 #e8eff5;
+  scrollbar-width: thin;
+}
+
+.table-shell::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-shell::-webkit-scrollbar-track {
+  background: #e8eff5;
+  border-radius: 999px;
+}
+
+.table-shell::-webkit-scrollbar-thumb {
+  background: #9fb3c7;
+  border-radius: 999px;
 }
 
 table {
@@ -633,6 +651,24 @@ tbody tr:hover {
 @media (max-width: 640px) {
   .resumen-grid {
     grid-template-columns: 1fr;
+  }
+
+  .table-shell {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 720px;
+  }
+
+  .modal-detalle {
+    padding: 0.8rem;
+  }
+
+  .modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 }
 </style>

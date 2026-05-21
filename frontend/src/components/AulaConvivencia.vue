@@ -625,7 +625,24 @@ export default {
 }
 
 .tabla-container {
-  overflow-x: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: #9fb3c7 #e8eff5;
+  scrollbar-width: thin;
+}
+
+.tabla-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tabla-container::-webkit-scrollbar-track {
+  background: #e8eff5;
+  border-radius: 999px;
+}
+
+.tabla-container::-webkit-scrollbar-thumb {
+  background: #9fb3c7;
+  border-radius: 999px;
 }
 
 table {
@@ -964,6 +981,17 @@ table tbody tr:last-child td {
   text-align: right;
 }
 
+@media (max-width: 1024px) {
+  .filtros {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filtros-info {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 768px) {
   .header-guardia {
     align-items: flex-start;
@@ -971,6 +999,7 @@ table tbody tr:last-child td {
   }
   
   .filtros {
+    display: grid;
     grid-template-columns: 1fr;
   }
   
@@ -995,6 +1024,25 @@ table tbody tr:last-child td {
   
   .modal-content {
     width: 95%;
+  }
+
+  .form-actions {
+    text-align: center;
+  }
+
+  .btn-guardar-evaluaciones {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .tabla-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 920px;
   }
 }
 </style>

@@ -10,12 +10,17 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -389,47 +394,94 @@ public class ExpulsionService {
             document.addPage(page);
 
             PDPageContentStream content = new PDPageContentStream(document, page);
-            float y = 780f;
             float left = 50f;
+            float pageWidth = page.getMediaBox().getWidth();
+            float right = pageWidth - left;
+            float contentWidth = 500f;
+            float contentLeft = (pageWidth - contentWidth) / 2f;
+            float y = 790f;
             float lineHeight = 16f;
 
-            y = writeLine(content, "CARTA OFICIAL DE EXPULSIÓN", left, y, PDType1Font.HELVETICA_BOLD, 14);
-            y -= 4;
-            y = writeLine(content, "IES Jándula - Sistema de Convivencia", left, y, PDType1Font.HELVETICA, 11);
-            y -= 12;
+            PDImageXObject logo = loadLogo(document);
+            if (logo != null) {
+                float logoHeight = 48f;
+                float logoWidth = logo.getWidth() * (logoHeight / logo.getHeight());
+                content.drawImage(logo, left, y - logoHeight, logoWidth, logoHeight);
+            }
+
+            y = writeCentered(content, "CARTA OFICIAL DE EXPULSIÓN", y - 2, pageWidth, PDType1Font.HELVETICA_BOLD, 14);
+            y -= 2;
+            y = writeCentered(content, "IES Jándula - Sistema de Convivencia", y, pageWidth, PDType1Font.HELVETICA, 11);
+            y -= 10;
 
             Alumno alumno = expulsion.getAlumno();
-            y = writeLine(content, "Alumno: " + safe(alumno != null ? alumno.getNombre() : "") + " " + safe(alumno != null ? alumno.getApellidos() : ""), left, y, PDType1Font.HELVETICA_BOLD, 11);
+                y = writeCentered(content,
+                    "Alumno: " + safe(alumno != null ? alumno.getNombre() : "") + " " + safe(alumno != null ? alumno.getApellidos() : ""),
+                    y,
+                    pageWidth,
+                    PDType1Font.HELVETICA_BOLD,
+                    11);
             String cursoTexto = (alumno != null && alumno.getGrupo() != null) ? safe(alumno.getGrupo().getCurso()) : "";
             String grupoTexto = (alumno != null && alumno.getGrupo() != null) ? safe(alumno.getGrupo().getLetra()) : "";
-            y = writeLine(content, "Curso/Grupo: " + cursoTexto + " " + grupoTexto, left, y, PDType1Font.HELVETICA, 11);
-            y = writeLine(content, "Fecha inicio expulsión: " + DATE_FMT.format(expulsion.getFechaInicio()), left, y, PDType1Font.HELVETICA, 11);
-            y = writeLine(content, "Fecha fin expulsión: " + DATE_FMT.format(expulsion.getFechaFin()), left, y, PDType1Font.HELVETICA, 11);
-            y = writeLine(content, "Tramitada por: " + safe(expulsion.getJefatura() != null ? expulsion.getJefatura().getNombre() : ""), left, y, PDType1Font.HELVETICA, 11);
-            y -= 12;
+                y = writeCentered(content, "Curso/Grupo: " + cursoTexto + " " + grupoTexto, y, pageWidth, PDType1Font.HELVETICA, 11);
+                y = writeCentered(content, "Fecha inicio expulsión: " + DATE_FMT.format(expulsion.getFechaInicio()), y, pageWidth, PDType1Font.HELVETICA, 11);
+                y = writeCentered(content, "Fecha fin expulsión: " + DATE_FMT.format(expulsion.getFechaFin()), y, pageWidth, PDType1Font.HELVETICA, 11);
+                y = writeCentered(content,
+                    "Tramitada por: " + safe(expulsion.getJefatura() != null ? expulsion.getJefatura().getNombre() : ""),
+                    y,
+                    pageWidth,
+                    PDType1Font.HELVETICA,
+                    11);
+                y -= 10;
 
-            y = writeLine(content, "Partes computados:", left, y, PDType1Font.HELVETICA_BOLD, 12);
+            y = writeLine(content, "Partes computados:", contentLeft, y, PDType1Font.HELVETICA_BOLD, 12);
             if (partesVinculados.isEmpty()) {
-                y = writeLine(content, "- No hay partes asociados.", left + 10, y, PDType1Font.HELVETICA, 11);
+                y = writeLine(content, "- No hay partes asociados.", contentLeft + 10, y, PDType1Font.HELVETICA, 11);
             } else {
                 for (ParteExpulsion pe : partesVinculados) {
                     ParteDisciplinario parte = pe.getParte();
                     if (parte == null || parte.getFecha() == null) {
                         continue;
                     }
-                    String linea = String.format("- %s | %s | %s",
-                            DATE_FMT.format(parte.getFecha()),
-                            safe(parte.getGravedad() != null ? parte.getGravedad().name() : ""),
-                            safe(parte.getDescripcion()));
-                    y = writeWrapped(content, linea, left + 10, y, 500, lineHeight, PDType1Font.HELVETICA, 10);
+                    String fechaParte = DATE_FMT.format(parte.getFecha());
+                    String tipoConducta = "";
+                    if (parte.getConducta() != null) {
+                        String codigo = safe(parte.getConducta().getCodigo());
+                        String descripcion = safe(parte.getConducta().getDescripcion());
+                        if (!codigo.isEmpty()) {
+                            tipoConducta = codigo + (descripcion.isEmpty() ? "" : " - " + descripcion);
+                        } else {
+                            tipoConducta = descripcion;
+                        }
+                    }
+
+                    y = writeLine(content, "- Fecha parte: " + fechaParte, contentLeft + 10, y, PDType1Font.HELVETICA, 10);
+                    y = writeWrapped(content,
+                            "  Tipo de conducta: " + tipoConducta,
+                            contentLeft + 10,
+                            y,
+                            contentWidth - 10,
+                            lineHeight,
+                            PDType1Font.HELVETICA,
+                            10);
+                    y = writeWrapped(content,
+                            "  Hechos: " + safe(parte.getDescripcion()),
+                            contentLeft + 10,
+                            y,
+                            contentWidth - 10,
+                            lineHeight,
+                            PDType1Font.HELVETICA,
+                            10);
+                    y -= 2;
                 }
             }
 
             y -= 10;
-            y = writeLine(content, "Tareas propuestas por el equipo docente:", left, y, PDType1Font.HELVETICA_BOLD, 12);
+            y = writeLine(content, "Tareas propuestas por el equipo docente:", contentLeft, y, PDType1Font.HELVETICA_BOLD, 12);
             y -= 4;
 
-            y = drawTareasTable(content, tareas, left, y);
+            y = drawTareasTable(content, tareas, contentLeft, y);
+            drawSignatureBlock(content, left, right, 120f);
             content.close();
 
             document.save(out);
@@ -509,6 +561,74 @@ public class ExpulsionService {
         content.showText(text);
         content.endText();
         return y - 16;
+    }
+
+    private float writeCentered(PDPageContentStream content,
+                                String text,
+                                float y,
+                                float pageWidth,
+                                PDType1Font font,
+                                int size) throws IOException {
+        String value = safe(text);
+        float textWidth = font.getStringWidth(value) / 1000 * size;
+        float x = (pageWidth - textWidth) / 2f;
+        return writeLine(content, value, x, y, font, size);
+    }
+
+    private void drawSignatureBlock(PDPageContentStream content, float left, float right, float y) throws IOException {
+        float gap = 30f;
+        float blockWidth = (right - left - gap) / 2f;
+        float lineY = y;
+        float labelY = y - 14f;
+
+        content.setLineWidth(0.6f);
+        content.moveTo(left, lineY);
+        content.lineTo(left + blockWidth, lineY);
+        content.moveTo(left + blockWidth + gap, lineY);
+        content.lineTo(left + blockWidth + gap + blockWidth, lineY);
+        content.stroke();
+
+        content.setFont(PDType1Font.HELVETICA, 10);
+        content.beginText();
+        content.newLineAtOffset(left + 2, labelY);
+        content.showText("Firma del centro");
+        content.endText();
+
+        content.beginText();
+        content.newLineAtOffset(left + blockWidth + gap + 2, labelY);
+        content.showText("Firma del padre/madre/tutor");
+        content.endText();
+    }
+
+    private PDImageXObject loadLogo(PDDocument document) {
+        try (InputStream resourceStream = getClass().getResourceAsStream("/logo-jandula.png")) {
+            if (resourceStream != null) {
+                byte[] bytes = resourceStream.readAllBytes();
+                return PDImageXObject.createFromByteArray(document, bytes, "logo-jandula");
+            }
+        } catch (IOException ignored) {
+            // Fallback to filesystem paths below.
+        }
+
+        List<Path> candidates = List.of(
+                Paths.get("src", "main", "resources", "logo-jandula.png"),
+                Paths.get("backend", "src", "main", "resources", "logo-jandula.png"),
+                Paths.get("frontend", "src", "assets", "logo-jandula.png")
+        );
+
+        for (Path candidate : candidates) {
+            if (!Files.exists(candidate)) {
+                continue;
+            }
+            try {
+                byte[] bytes = Files.readAllBytes(candidate);
+                return PDImageXObject.createFromByteArray(document, bytes, "logo-jandula");
+            } catch (IOException ignored) {
+                // Try next candidate.
+            }
+        }
+
+        return null;
     }
 
     private float writeWrapped(PDPageContentStream content,

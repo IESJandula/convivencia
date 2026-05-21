@@ -911,4 +911,31 @@ h2 {
     align-self: flex-end;
   }
 }
+
+@media (max-width: 640px) {
+  .stats-panel {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    flex: 1 1 48%;
+    min-width: 0;
+  }
+
+  .card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-enviar,
+  .btn-modificar {
+    width: 100%;
+  }
+
+  .modal-tarea-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 </style>

@@ -803,6 +803,24 @@ export default {
   background: #f3f7fb;
   padding: 0.4rem;
   overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: #9fb3c7 #e8eff5;
+  scrollbar-width: thin;
+}
+
+.table-shell::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-shell::-webkit-scrollbar-track {
+  background: #e8eff5;
+  border-radius: 999px;
+}
+
+.table-shell::-webkit-scrollbar-thumb {
+  background: #9fb3c7;
+  border-radius: 999px;
 }
 
 table {
@@ -1145,6 +1163,29 @@ tbody tr:last-child td {
   color: #666;
   font-size: 0.8rem;
   word-break: break-all;
+}
+
+@media (max-width: 900px) {
+  .filtros {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filtros .form-group {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .btn-limpiar-historial {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .filtro-alumno-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
 }
 
 @media (max-width: 640px) {

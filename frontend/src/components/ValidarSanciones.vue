@@ -914,6 +914,24 @@ select {
   background: #f3f7fb;
   padding: 0.4rem;
   overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: #9fb3c7 #e8eff5;
+  scrollbar-width: thin;
+}
+
+.table-shell::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-shell::-webkit-scrollbar-track {
+  background: #e8eff5;
+  border-radius: 999px;
+}
+
+.table-shell::-webkit-scrollbar-thumb {
+  background: #9fb3c7;
+  border-radius: 999px;
 }
 
 table {
@@ -1167,6 +1185,27 @@ tbody tr:last-child td {
   color: #30485d;
 }
 
+@media (max-width: 900px) {
+  .filtros {
+    grid-template-columns: 1fr;
+  }
+
+  .expulsion-form {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-actions-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filtros-inline {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+}
+
 @media (max-width: 980px) {
   .resumen-grid {
     grid-template-columns: 1fr;
@@ -1194,6 +1233,15 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 640px) {
+  .table-shell {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 900px;
+  }
+
   .filtros {
     grid-template-columns: 1fr;
   }

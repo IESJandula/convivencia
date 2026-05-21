@@ -506,9 +506,118 @@ export default {
 .nav-button.nav-forced-active::after {
   transform: scaleX(0);
 }
-.container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; }
+.container { max-width: 1000px; margin: 2rem auto; padding: 0 2rem; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-color: #9fb3c7 #e8eff5; scrollbar-width: thin; }
 .container.container-wide-aula { max-width: 1320px; padding: 0 1rem; }
 .container.container-wide-expulsiones { max-width: 1240px; padding: 0 1rem; }
+
+.container::-webkit-scrollbar { height: 8px; }
+.container::-webkit-scrollbar-track { background: #e8eff5; border-radius: 999px; }
+.container::-webkit-scrollbar-thumb { background: #9fb3c7; border-radius: 999px; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; background: #f0f2f5; }
+
+@media (max-width: 1024px) {
+  .header-top {
+    height: auto;
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .header-left {
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .text-role {
+    font-size: 1.05rem !important;
+  }
+
+  .user-name-pill {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .nav-links {
+    padding: 0 1rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-button {
+    padding: 0.85rem 1rem;
+    font-size: 0.9rem;
+    flex: 0 0 auto;
+  }
+
+  .container {
+    padding: 0 1rem;
+    margin: 1.2rem auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .header-top {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.6rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .header-left {
+    justify-content: flex-start;
+    width: 100%;
+    flex: 1 1 100%;
+    gap: 0.5rem;
+  }
+
+  .header-user-info {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logo-white-box {
+    width: 40px;
+    height: 40px;
+  }
+
+  .navbar-right {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 10px;
+    flex: 1 1 100%;
+  }
+
+  .nav-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    padding: 0.6rem;
+    overflow-x: visible;
+    white-space: normal;
+  }
+
+  .nav-button {
+    padding: 0.6rem 0.65rem;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .container.container-wide-aula,
+  .container.container-wide-expulsiones {
+    padding: 0 0.75rem;
+  }
+
+  .container {
+    margin: 0.75rem auto;
+  }
+}
 </style>

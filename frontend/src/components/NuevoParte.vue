@@ -808,4 +808,14 @@ export default {
     align-items: stretch;
   }
 }
+
+@media (max-width: 900px) {
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .card-jandula {
+    padding: 22px;
+  }
+}
 </style>
